@@ -1,0 +1,38 @@
+# Core dependencies with security updates
+aiogram
+python-dotenv
+aiofiles
+aiohttp
+pytz
+jinja2
+pillow
+markupsafe
+html5lib
+bleach
+aiohttp-cors
+
+# Security & validation
+pydantic
+pydantic-settings
+cryptography
+python-multipart
+
+# Database
+aiosqlite
+
+# Redis for rate limiting & caching
+aioredis
+redis
+
+# Monitoring & logging
+sentry-sdk
+
+# Security headers
+secure
+
+# API security
+PyJWT
+python-jose
+
+# SQL injection prevention
+sqlalchemy
