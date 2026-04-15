@@ -105,38 +105,6 @@ def init_db():
             followup_sent INTEGER DEFAULT 0
         )''')
 
-        # Кастомные заказы
-        c.execute('''CREATE TABLE IF NOT EXISTS custom_orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            purpose TEXT,
-            stones TEXT,
-            size TEXT,
-            notes TEXT,
-            photo1 TEXT,
-            photo2 TEXT,
-            status TEXT DEFAULT 'pending',
-            created_at TIMESTAMP
-        )''')
-
-        # Музыка и тренировки
-        c.execute('''CREATE TABLE IF NOT EXISTS music (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            description TEXT,
-            duration INTEGER,
-            audio_url TEXT,
-            created_at TIMESTAMP
-        )''')
-        c.execute('''CREATE TABLE IF NOT EXISTS workouts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            description TEXT,
-            duration INTEGER,
-            difficulty TEXT,
-            created_at TIMESTAMP
-        )''')
-
         # Услуги и расписание
         c.execute('''CREATE TABLE IF NOT EXISTS services (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -227,39 +195,7 @@ def init_db():
             notes TEXT
         )''')
 
-        # Квизы
-        c.execute('''CREATE TABLE IF NOT EXISTS quiz_questions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question TEXT,
-            options TEXT,
-            weights TEXT,
-            sort_order INTEGER,
-            active INTEGER DEFAULT 1
-        )''')
-        c.execute('''CREATE TABLE IF NOT EXISTS quiz_results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            answers TEXT,
-            recommended_stone TEXT,
-            created_at TIMESTAMP
-        )''')
-        c.execute('''CREATE TABLE IF NOT EXISTS totem_questions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question TEXT,
-            options TEXT,
-            weights TEXT,
-            sort_order INTEGER,
-            active INTEGER DEFAULT 1
-        )''')
-        c.execute('''CREATE TABLE IF NOT EXISTS totem_results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            answers TEXT,
-            top1 TEXT,
-            top2 TEXT,
-            top3 TEXT,
-            created_at TIMESTAMP
-        )''')
+
 
         # Истории
         c.execute('''CREATE TABLE IF NOT EXISTS stories (
@@ -312,20 +248,6 @@ def init_db():
             code TEXT,
             used_at TIMESTAMP,
             PRIMARY KEY (user_id, code)
-        )''')
-
-        # Клуб
-        c.execute('''CREATE TABLE IF NOT EXISTS club_subscriptions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER UNIQUE,
-            status TEXT DEFAULT 'trial',
-            trial_start TIMESTAMP,
-            trial_end TIMESTAMP,
-            subscription_start TIMESTAMP,
-            subscription_end TIMESTAMP,
-            payment_id TEXT,
-            created_at TIMESTAMP,
-            updated_at TIMESTAMP
         )''')
 
         # Планировщик постов
@@ -388,33 +310,7 @@ def init_db():
             created_at TIMESTAMP
         )''')
 
-        # AI консультации — лимит запросов
-        c.execute('''CREATE TABLE IF NOT EXISTS ai_consult_usage (
-            user_id INTEGER,
-            usage_date DATE,
-            count INTEGER DEFAULT 0,
-            PRIMARY KEY (user_id, usage_date)
-        )''')
 
-        # Стрик практик
-        c.execute('''CREATE TABLE IF NOT EXISTS user_streaks (
-            user_id INTEGER PRIMARY KEY,
-            streak_days INTEGER DEFAULT 0,
-            last_checkin DATE,
-            total_checkins INTEGER DEFAULT 0,
-            last_cleaning_reminder DATE
-        )''')
-
-        # Астро-советы недели
-        c.execute('''CREATE TABLE IF NOT EXISTS astro_advice (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            text TEXT NOT NULL,
-            stones TEXT,
-            author_id INTEGER,
-            sent INTEGER DEFAULT 0,
-            created_at TIMESTAMP,
-            sent_at TIMESTAMP
-        )''')
 
         # Подписка на новинки витрины
         c.execute('''CREATE TABLE IF NOT EXISTS new_item_subscribers (
@@ -422,16 +318,6 @@ def init_db():
             subscribed_at TIMESTAMP
         )''')
 
-        # Марафон 21 день — участники
-        c.execute('''CREATE TABLE IF NOT EXISTS marathon_participants (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            day_number INTEGER DEFAULT 1,
-            started_at TIMESTAMP,
-            last_day_at TIMESTAMP,
-            status TEXT DEFAULT 'active',
-            payment_charge_id TEXT
-        )''')
 
         # Запросы отзывов после заказа
         c.execute('''CREATE TABLE IF NOT EXISTS review_requests (

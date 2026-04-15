@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 
 from src.database.db import db
-from src.database.models import OrderModel, ClubModel
+from src.database.models import OrderModel
 from src.services.notifications import AdminNotifier
 from src.config import Config
 
@@ -75,16 +75,6 @@ async def check_birthdays():
         except Exception as e:
             logger.error(f"Ошибка в check_birthdays: {e}")
 
-
-async def check_expired_subscriptions():
-    """Проверка истекших подписок клуба."""
-    while True:
-        try:
-            await asyncio.sleep(3600)
-            ClubModel.expire_subscriptions()
-            logger.info("Проверка истекших подписок выполнена")
-        except Exception as e:
-            logger.error(f"Ошибка в check_expired_subscriptions: {e}")
 
 async def send_daily_stone(bot):
     """Рассылка камня дня в 9:00 каждый день."""

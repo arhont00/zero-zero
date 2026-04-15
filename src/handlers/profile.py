@@ -6,7 +6,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from src.database.db import db
-from src.database.models import UserModel, OrderModel, ClubModel
+from src.database.models import UserModel, OrderModel
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -36,49 +36,17 @@ async def profile_show(callback: CallbackQuery):
         row = c.fetchone()
         total_spent = int(row['total'] or 0)
 
-    # Стрик
-    with db.cursor() as c:
-        c.execute("SELECT streak_days, total_checkins FROM user_streaks WHERE user_id = ?", (user_id,))
-        streak_row = c.fetchone()
-    streak = streak_row['streak_days'] if streak_row else 0
-    checkins = streak_row['total_checkins'] if streak_row else 0
-
-    # Клуб
-    has_club = ClubModel.has_access(user_id)
-    club_status = "✅ Активна" if has_club else "❌ Нет"
-
-    # AI лимит
-    from datetime import date
-    today = date.today().isoformat()
-    with db.cursor() as c:
-        c.execute("SELECT count FROM ai_consult_usage WHERE user_id = ? AND usage_date = ?", (user_id, today))
-        ai_row = c.fetchone()
-    ai_used = ai_row['count'] if ai_row else 0
-    from src.config import Config
-    ai_limit = Config.AI_DAILY_LIMIT
-
-    fire = "🔥" * min(streak, 5) if streak > 0 else "—"
-
     text = (
         f"👤 *МОЙ ПРОФИЛЬ*\n\n"
         f"*{name}*\n\n"
         f"📦 *Заказов:* {orders_count} (на {total_spent} ₽)\n"
-        f"💰 *Бонусы:* {int(bonus)} ₽\n"
-        f"🔮 *Портал силы:* {club_status}\n"
-        f"🔥 *Стрик:* {fire} {streak} дней ({checkins} всего)\n"
-        f"🤖 *AI советов сегодня:* {ai_used}/{ai_limit}\n\n"
+        f"💰 *Бонусы:* {int(bonus)} ₽\n\n"
     )
 
     buttons = [
         [InlineKeyboardButton(text="📦 МОИ ЗАКАЗЫ", callback_data="my_orders")],
-        [InlineKeyboardButton(text="🔥 МОЙ СТРИК", callback_data="streak")],
         [InlineKeyboardButton(text="🤝 РЕФЕРАЛЫ", callback_data="referral")],
     ]
-
-    if has_club:
-        buttons.append([InlineKeyboardButton(text="🔮 ПОРТАЛ СИЛЫ", callback_data="club_content")])
-    else:
-        buttons.append([InlineKeyboardButton(text="🔮 ВСТУПИТЬ В КЛУБ", callback_data="club")])
 
     buttons.append([InlineKeyboardButton(text="← МЕНЮ", callback_data="menu")])
 

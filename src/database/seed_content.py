@@ -49,33 +49,6 @@ def seed_faq():
                       (q, a, order))
 
 
-def seed_music():
-    with db.cursor() as c:
-        c.execute("SELECT COUNT(*) as cnt FROM music WHERE name LIKE '432%'")
-        if c.fetchone()['cnt'] > 0:
-            return
-        tracks = [
-            ("432 Hz — Исцеление и баланс",
-             "Частота 432 Гц настраивает организм на естественный резонанс. "
-             "Используй при медитации с камнями или для очищения пространства.", None),
-            ("528 Hz — Частота любви",
-             "Частота 528 Гц — «мирацл тон». Считается частотой ДНК. "
-             "Идеальна при работе с розовым кварцем и камнями сердца.", None),
-            ("Тибетские поющие чаши",
-             "Звуки тибетских чаш очищают пространство и камни. "
-             "Включи во время очистки своих камней или медитации.", None),
-            ("ОМ мантра 108 раз",
-             "Классическая ОМ мантра 108 повторений. "
-             "Используй при зарядке камней намерением или утренней практике.", None),
-            ("Бинауральные ритмы — глубокая медитация",
-             "Слушать только в наушниках. "
-             "Альфа-волны (8-12 Гц) — расслабление и медитация с аметистом и лунным камнем.", None),
-        ]
-        for name, desc, audio_url in tracks:
-            c.execute("INSERT INTO music (name, description, audio_url) VALUES (?, ?, ?)",
-                      (name, desc, audio_url))
-
-
 def seed_products():
     with db.cursor() as c:
         c.execute("SELECT COUNT(*) as cnt FROM bracelets WHERE name LIKE '%Защита%'")
@@ -144,12 +117,6 @@ def seed_products():
                       (name, duration, difficulty, description))
 
 
-def run_all_content_seeds():
-    seed_faq()
-    seed_music()
-    seed_workouts()
-    sync_knowledge_from_files()
-    seed_club_info()
 
 
 def sync_knowledge_from_files():
@@ -192,28 +159,11 @@ def sync_knowledge_from_files():
             ))
 
 
-def seed_club_info():
-    """Создать файл описания клуба если не существует."""
-    from src.config import Config
-    club_info_file = Config.CONTENT_PATH / 'club_info.txt'
-    if club_info_file.exists():
-        return
-    Config.CONTENT_PATH.mkdir(parents=True, exist_ok=True)
-    Config.CLUB_CONTENT_PATH.mkdir(parents=True, exist_ok=True)
-    club_info_file.write_text(
-        "Закрытый клуб для тех, кто хочет работать с камнями глубоко.\n\n"
-        "Здесь собраны практики, медитации и знания, которые недоступны в открытом доступе.\n\n"
-        "Мастер лично работает с каждым участником клуба.",
-        encoding='utf-8'
-    )
-
 
 def run_all_content_seeds():
     """Запускает все сиды контента."""
     seed_faq()
-    seed_music()
     seed_workouts()
     seed_products()
     sync_knowledge_from_files()
-    seed_club_info()
 

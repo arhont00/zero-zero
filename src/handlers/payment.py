@@ -7,7 +7,7 @@ from aiogram.types import Message, PreCheckoutQuery, CallbackQuery, InlineKeyboa
 from aiogram.fsm.context import FSMContext
 
 from src.database.db import db
-from src.database.models import OrderModel, CartModel, UserModel, ClubModel
+from src.database.models import OrderModel, CartModel, UserModel
 from src.keyboards.inline import get_main_keyboard
 from src.services.notifications import AdminNotifier
 from src.utils.helpers import format_price
@@ -40,9 +40,6 @@ async def successful_payment_handler(message: Message, state: FSMContext, bot: B
 
     if payload.startswith("order_"):
         await _process_order_payment(message, payload, payment, bot)
-
-    elif payload.startswith("club_"):
-        await _process_club_payment(message, payload, payment, bot)
 
     elif payload.startswith("diagnostic_"):
         await _process_diagnostic_payment(message, payment, state, bot)
@@ -276,43 +273,6 @@ async def _process_order_payment(message: Message, payload: str, payment, bot: B
         "Мастер свяжется с вами для уточнения деталей.",
         parse_mode="Markdown",
         reply_markup=get_main_keyboard()
-    )
-
-
-async def _process_club_payment(message: Message, payload: str, payment, bot: Bot):
-    """Обработка оплаты подписки на клуб."""
-    user_id = message.from_user.id
-    parts = payload.split("_")
-
-    if len(parts) < 2:
-        logger.error(f"Неверный club payload: {payload}")
-        return
-
-    period = parts[1]
-    duration = 30 if period == "month" else 365
-
-    ClubModel.activate_paid(
-        user_id=user_id,
-        payment_id=payment.telegram_payment_charge_id,
-        duration_days=duration
-    )
-
-    with db.cursor() as c:
-        c.execute("""
-            INSERT OR IGNORE INTO stars_orders
-                (user_id, order_id, item_name, stars_amount, charge_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (user_id, 0, f"Подписка клуб {period}", payment.total_amount,
-              payment.telegram_payment_charge_id, datetime.now()))
-
-    await message.answer(
-        "🎉 *ПОДПИСКА АКТИВИРОВАНА!*\n\n"
-        "Добро пожаловать в «Портал силы»! Теперь вам доступны все материалы клуба.",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📚 МАТЕРИАЛЫ КЛУБА", callback_data="club_content")],
-            [InlineKeyboardButton(text="← В МЕНЮ", callback_data="menu")]
-        ])
     )
 
 

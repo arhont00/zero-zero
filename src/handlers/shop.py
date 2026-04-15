@@ -10,7 +10,7 @@ from aiogram.fsm.state import State, StatesGroup
 from src.database.db import db
 from src.database.models import (
     CategoryModel, ItemInfo, CartModel, OrderModel,
-    PromoModel, UserModel, ClubModel
+    PromoModel, UserModel
 )
 from src.keyboards.shop import (
     get_categories_keyboard, get_products_keyboard, get_product_keyboard,
@@ -180,12 +180,8 @@ async def checkout_start(callback: CallbackQuery, state: FSMContext):
     await FunnelTracker.track(user_id, "checkout")
 
     discount = 0
-    club_note = ""
     try:
-        if ClubModel.has_access(user_id):
-            club_discount = int(total * 0.2)
-            discount += club_discount
-            club_note = f"\nСкидка Портала силы 20%: -{format_price(club_discount)}"
+        pass
     except Exception:
         pass
 
@@ -200,7 +196,7 @@ async def checkout_start(callback: CallbackQuery, state: FSMContext):
 
     text = (
         f"💳 *ОФОРМЛЕНИЕ ЗАКАЗА*\n\n"
-        f"Сумма: {format_price(total)}{club_note}\n"
+        f"Сумма: {format_price(total)}\n"
         f"*К оплате: {format_price(final_total)}*\n\n"
         f"💰 Ваш бонусный баланс: {format_price(bonus_balance)}\n\n"
         "Есть промокод? Введите его в ответ на это сообщение."
@@ -260,10 +256,6 @@ async def show_payment_methods(message: Message, state: FSMContext):
     total, _ = CartModel.get_total(user_id)
     final_total = max(0, total - discount)
 
-    if ClubModel.has_access(user_id):
-        club_discount = int(final_total * 0.2)
-        final_total -= club_discount
-        discount += club_discount
 
     bonus_balance = UserModel.get_bonus_balance(user_id)
 

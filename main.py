@@ -106,7 +106,6 @@ async def background_tasks():
     from src.services.background import (
         check_pending_orders,
         check_birthdays,
-        check_expired_subscriptions,
         send_daily_stone,
         check_cart_reminders,
         check_reactivation,
@@ -117,7 +116,6 @@ async def background_tasks():
     await asyncio.gather(
         check_pending_orders(),
         check_birthdays(),
-        check_expired_subscriptions(),
         send_daily_stone(bot),
         check_cart_reminders(bot),
         check_reactivation(bot),
