@@ -13,7 +13,6 @@ from aiogram.enums import ParseMode
 from src.config import Config
 from src.database.db import db
 from src.database.init import init_db
-from src.database.seed_quiz import run_all_seeds
 from src.database.seed_content import run_all_content_seeds
 from src.utils.text_loader import ContentLoader
 from src.middlewares.rate_limit import RateLimitMiddleware
@@ -109,7 +108,6 @@ async def background_tasks():
         send_daily_stone,
         check_cart_reminders,
         check_reactivation,
-        send_monday_astro,
         send_review_requests,
         send_birthday_promos
     )
@@ -119,7 +117,6 @@ async def background_tasks():
         send_daily_stone(bot),
         check_cart_reminders(bot),
         check_reactivation(bot),
-        send_monday_astro(bot),
         send_review_requests(bot),
         send_birthday_promos(bot),
         return_exceptions=True
@@ -149,7 +146,6 @@ async def on_startup():
     logger.info("✅ База данных инициализирована")
     
     # Заполняем данные по умолчанию
-    run_all_seeds()
     run_all_content_seeds()
     logger.info("✅ Начальные данные загружены")
     

@@ -312,31 +312,6 @@ async def admin_diag_contact(callback: CallbackQuery):
 # КАСТОМНЫЙ ЗАКАЗ — ВЗЯТЬ В РАБОТУ (кнопка из уведомления мастеру)
 # ──────────────────────────────────────────────────────────────
 
-@router.callback_query(F.data.startswith("custom_take_"))
-async def custom_take_order(callback: CallbackQuery):
-    """Мастер берёт кастомный заказ в работу."""
-    if not UserModel.is_admin(callback.from_user.id):
-        await callback.answer("❌ Нет прав")
-        return
-
-    order_id = int(callback.data.replace("custom_take_", ""))
-
-    with db.cursor() as c:
-        c.execute("UPDATE custom_orders SET status = 'processing' WHERE id = ?", (order_id,))
-        c.execute("SELECT user_id FROM custom_orders WHERE id = ?", (order_id,))
-        row = c.fetchone()
-
-    if row:
-        try:
-            await callback.bot.send_message(
-                row['user_id'],
-                f"💍 *КАСТОМНЫЙ ЗАКАЗ #{order_id}*\n\n"
-                "Мастер взял вашу заявку в работу! 🎉\n"
-                "Скоро свяжется с вами для обсуждения деталей.",
-                parse_mode="Markdown"
-            )
-        except Exception:
-            pass
 
     await callback.answer(f"✅ Заказ #{order_id} взят в работу", show_alert=True)
     await callback.message.edit_reply_markup(
