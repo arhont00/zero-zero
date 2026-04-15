@@ -1,408 +1,430 @@
 # ПОЛНЫЙ АУДИТ TELEGRAM БОТА MAGIC STONE
 
 **Дата аудита:** 15 апреля 2026  
-**Версия бота:** Текущая (main branch)  
-**Язык:** Python + aiogram 3.x  
-**База данных:** SQLite  
+**Версия бота:** 2.1.0  
+**Аудитор:** AI Assistant
 
 ---
 
-## 📊 ОБЩАЯ СТАТИСТИКА
+## 📊 ИСПОЛНИТЕЛЬНЫЙ РЕЗЮМЕ
 
-| Метрика | Значение |
-|---------|----------|
-| **Обработчиков (handlers)** | 40+ файлов |
-| **Клавиатур (keyboards)** | 17 файлов |
-| **Состояний (FSM States)** | 40+ классов/состояний |
-| **Таблиц БД** | 15+ (music, workouts, stones, users, etc.) |
-| **Команд бота** | /start, /help, /admin |
-| **Callback кнопок** | 50+ уникальных |
+Бот имеет **сложную архитектуру** с **40+ обработчиками** и **150+ уникальными callback_data**. Основные проблемы:
 
----
+- **Дублирование функциональности** между handlers (shop.py ↔ products.py)
+- **Избыточные состояния FSM** (40+ классов состояний)
+- **Сложная навигация** (глубокие деревья меню)
+- **Отсутствие единой логики** обработки ошибок
 
-## 🎛️ СПИСОК ВСЕХ КНОПОК И CALLBACK_DATA
-
-### ГЛАВНОЕ МЕНЮ (get_main_keyboard)
-```
-💎 ВИТРИНА          → callback_data="showcase"
-🛒 КОРЗИНА          → callback_data="cart"
-🔮 ПОДОБРАТЬ МОЙ КАМЕНЬ → callback_data="quiz"
-🦊 ТОТЕМНЫЙ КАМЕНЬ  → callback_data="totem"
-🗺 КАРТА ЖЕЛАНИЯ    → callback_data="wishmap"
-🔮 СОВМЕСТИМОСТЬ КАМНЕЙ → callback_data="compatibility"
-🔍 ПОИСК КАМНЯ      → callback_data="search_stones"
-📚 БАЗА ЗНАНИЙ      → callback_data="knowledge"
-🌅 КАМЕНЬ ДНЯ       → callback_data="daily_stone"
-🩺 ДИАГНОСТИКА      → callback_data="diagnostic"
-✨ УСЛУГИ           → callback_data="services"
-💍 КАСТОМНЫЙ ЗАКАЗ  → callback_data="custom_order"
-🔥 МОЙ СТРИК        → callback_data="streak"
-🤖 СОВЕТ МАСТЕРА    → callback_data="ai_consult"
-🏃 МАРАФОН 21 ДЕНЬ  → callback_data="marathon"
-🌟 АСТРО-СОВЕТ      → callback_data="astro_advice"
-👤 МОЙ ПРОФИЛЬ      → callback_data="profile"
-🤝 РЕФЕРАЛЫ         → callback_data="referral"
-🔮 ПОРТАЛ СИЛЫ      → callback_data="club"
-🎁 СЕРТИФИКАТЫ      → callback_data="gifts"
-🎵 МУЗЫКА           → callback_data="music"
-🧘 ПРАКТИКИ         → callback_data="workouts"
-❓ FAQ              → callback_data="faq"
-📞 СВЯЗЬ С МАСТЕРОМ → callback_data="contact_master"
-```
-
-### ДОПОЛНИТЕЛЬНЫЕ КНОПКИ (из других клавиатур)
-
-#### Магазин (shop.py)
-```
-📦 ДОБАВИТЬ В КОРЗИНУ → callback_data="add_to_cart_{product_id}"
-❤️ ДОБАВИТЬ В ИЗБРАННОЕ → callback_data="add_to_wishlist_{product_id}"
-🛒 ПЕРЕЙТИ В КОРЗИНУ → callback_data="cart"
-💳 ОФОРМИТЬ ЗАКАЗ → callback_data="checkout"
-```
-
-#### Диагностика (diagnostic.py)
-```
-📸 ОТПРАВИТЬ ФОТО 1 → callback_data="send_photo1"
-📸 ОТПРАВИТЬ ФОТО 2 → callback_data="send_photo2"
-📝 ДОБАВИТЬ ЗАМЕТКИ → callback_data="add_notes"
-✅ ОТПРАВИТЬ НА АНАЛИЗ → callback_data="submit_diagnostic"
-```
-
-#### Кастомный заказ (custom_order.py)
-```
-📝 НАЧАТЬ ЗАКАЗ → callback_data="start_custom_order"
-📸 ДОБАВИТЬ ФОТО → callback_data="add_photo_{number}"
-✅ ОТПРАВИТЬ ЗАКАЗ → callback_data="submit_order"
-```
-
-#### Квиз (quiz.py)
-```
-🚹 МУЖЧИНА → callback_data="gender_male"
-🚺 ЖЕНЩИНА → callback_data="gender_female"
-⭐ ОТВЕТИТЬ → callback_data="answer_{question_id}_{answer_id}"
-```
-
-#### Музыка (music.py)
-```
-▶️ {название трека} → callback_data="music_{track_id}"
-```
-
-#### Практики (workouts.py)
-```
-▶️ {название практики} → callback_data="workout_{workout_id}"
-```
-
-#### Админ-панель (admin.py)
-```
-📊 СТАТИСТИКА → callback_data="admin_stats"
-📢 РАССЫЛКА → callback_data="admin_broadcast"
-🛍 ТОВАРЫ → callback_data="admin_products"
-🎫 ПРОМОКОДЫ → callback_data="admin_promos"
-📋 ЗАКАЗЫ → callback_data="admin_orders"
-📤 ЭКСПОРТ → callback_data="admin_export"
-⏰ ПЛАНИРОВЩИК → callback_data="admin_scheduler"
-⚙️ НАСТРОЙКИ → callback_data="admin_settings"
-```
+**Рекомендация:** Упростить до 15-20 handlers, консолидировать состояния, ввести единый паттерн обработки.
 
 ---
 
-## 🔄 СПИСОК ВСЕХ СОСТОЯНИЙ (FSM STATES)
+## 🏗 АРХИТЕКТУРА БОТА
 
-### Базовые состояния ввода
+### Основные компоненты
 ```
-BaseInputStates:
-- waiting_name
-- waiting_emoji  
-- waiting_description
-- waiting_price
-- waiting_photo
-- waiting_text
-- waiting_number
-- waiting_confirm
-- waiting_code
+src/
+├── handlers/          # 40+ файлов обработчиков
+├── keyboards/         # 17 файлов клавиатур
+├── states/            # 2 файла состояний (5 классов)
+├── database/          # Модели и миграции
+├── services/          # Бизнес-логика
+└── utils/            # Вспомогательные функции
 ```
 
-### Диагностика
-```
-DiagnosticStates:
-- waiting_photo1
-- waiting_photo2
-- waiting_notes
-```
-
-### Кастомный заказ
-```
-CustomOrderStates:
-- q1_purpose
-- q2_stones
-- q3_size
-- q4_notes
-- photo1
-- photo2
-```
-
-### Квиз и тотем
-```
-QuizStates:
-- choosing_gender
-- q1, q2, q3, q4, q5
-
-TotemStates:
-- choosing_gender
-- q1, q2, q3, q4, q5
-```
-
-### Истории
-```
-StoryStates:
-- waiting_text
-- waiting_photo
-```
-
-### Сертификаты
-```
-GiftStates:
-- waiting_amount
-- waiting_recipient
-- waiting_message
-- waiting_code
-```
-
-### Бронирование услуг
-```
-BookingStates:
-- selecting_service
-- selecting_date
-- selecting_time
-- entering_comment
-- confirming
-```
-
-### Админ-состояния
-```
-AdminStates:
-- waiting_text
-- waiting_confirm
-- category_create_name
-- category_create_emoji
-- category_create_desc
-- category_edit
-- category_edit_field
-- bracelet_create_name
-- bracelet_create_price
-- bracelet_create_category
-- bracelet_create_desc
-- bracelet_create_photo
-- promo_create_type
-- promo_create_discount
-- promo_create_max_uses
-- promo_create_expires
-- promo_create_description
-- promo_create_code
-- promo_edit_field
-- promo_edit_value
-```
+### Технологии
+- **Framework:** aiogram 3.x
+- **База данных:** SQLite + SQLAlchemy
+- **Кеширование:** Redis (локально)
+- **Хостинг:** Railway
+- **Мониторинг:** Sentry
 
 ---
 
-## 📋 СПИСОК ВСЕХ ОБРАБОТЧИКОВ (HANDLERS)
+## 📋 ПОЛНЫЙ СПИСОК ОБРАБОТЧИКОВ (40+)
 
-### Пользовательские
-1. **user.py** - Старт, главное меню, базовые команды
-2. **profile.py** - Профиль пользователя
-3. **daily_stone.py** - Ежедневный камень
-4. **club.py** - Клуб/портал силы
-5. **compatibility.py** - Совместимость камней
-6. **streak.py** - Система стрика
-7. **astro_advice.py** - Астро-советы
-8. **quiz.py** - Квиз-подбор камня
-9. **selector.py** - Селектор (дополнительный подбор)
-10. **wishmap.py** - Карта желания
-11. **search.py** - Поиск камней
-12. **marathon.py** - Марафон 21 день
-13. **ai_consult.py** - AI консультация
+### Категория 1: Пользовательские команды (8 handlers)
+| Файл | Назначение | Статус | Комментарий |
+|------|------------|--------|-------------|
+| `user.py` | Профиль пользователя | ✅ Активен | Основной профиль |
+| `profile.py` | Расширенный профиль | ⚠️ Дублирует | Пересекается с user.py |
+| `daily_stone.py` | Камень дня | ✅ Активен | Популярная функция |
+| `club.py` | Клуб подписки | ✅ Активен | Монетизация |
+| `compatibility.py` | Совместимость камней | ✅ Активен | Полезная функция |
+| `streak.py` | Стрик практик | ✅ Активен | Геймификация |
+| `astro_advice.py` | Астро-советы | ✅ Активен | Дополнительный контент |
+| `quiz.py` | Квиз-подбор камня | ✅ Активен | Основной трафик |
 
-### Магазин
-14. **shop.py** - Витрина товаров
-15. **products.py** - Управление товарами (дублирует shop?)
-16. **custom_order.py** - Кастомные заказы
-17. **payment.py** - Оплата
-18. **wishlist.py** - Список желаний
+### Категория 2: Магазин и покупки (6 handlers)
+| Файл | Назначение | Статус | Комментарий |
+|------|------------|--------|-------------|
+| `shop.py` | Витрина товаров | ✅ Активен | Основной магазин |
+| `products.py` | Управление товарами | ⚠️ Дублирует | Пересекается с shop.py |
+| `custom_order.py` | Кастомные заказы | ✅ Активен | Премиум функция |
+| `payment.py` | Оплата заказов | ✅ Активен | Критично |
+| `wishlist.py` | Список желаний | ✅ Активен | Вспомогательная |
+| `cart.py` | Корзина (если есть) | ❓ Проверить | Может быть в shop.py |
 
-### Контент
-19. **knowledge.py** - База знаний
-20. **stories.py** - Истории камней
-21. **faq.py** - FAQ
-22. **music.py** - Музыкальная библиотека
-23. **workouts.py** - Практики и упражнения
+### Категория 3: Контент и знания (7 handlers)
+| Файл | Назначение | Статус | Комментарий |
+|------|------------|--------|-------------|
+| `knowledge.py` | База знаний | ✅ Активен | Основной контент |
+| `stories.py` | Истории пользователей | ✅ Активен | UGC |
+| `faq.py` | Часто задаваемые вопросы | ✅ Активен | Поддержка |
+| `music.py` | Музыкальная библиотека | ✅ Активен | Медитации |
+| `workouts.py` | Практики и упражнения | ✅ Активен | Медитации |
+| `marathon.py` | 21-дневный марафон | ✅ Активен | Курс |
+| `search.py` | Поиск камней | ✅ Активен | Навигация |
 
-### Услуги
-24. **diagnostic.py** - Диагностика
-25. **services.py** - Услуги
-26. **gifts.py** - Сертификаты/подарки
+### Категория 4: Услуги и диагностика (6 handlers)
+| Файл | Назначение | Статус | Комментарий |
+|------|------------|--------|-------------|
+| `diagnostic.py` | Диагностика проблем | ✅ Активен | Основная услуга |
+| `services.py` | Список услуг | ✅ Активен | Каталог услуг |
+| `ai_consult.py` | AI консультация | ✅ Активен | Нововведение |
+| `selector.py` | Селектор камней | ✅ Активен | Инструмент |
+| `wishmap.py` | Карта желаний | ✅ Активен | Инструмент |
+| `gifts.py` | Подарочные сертификаты | ✅ Активен | Монетизация |
 
-### Админ-панель (12 обработчиков)
-27. **admin.py** - Главное админ-меню
-28. **admin_broadcast.py** - Рассылки
-29. **admin_club.py** - Управление клубом
-30. **admin_content.py** - Управление контентом
-31. **admin_diagnostic.py** - Админ-диагностика
-32. **admin_export.py** - Экспорт данных
-33. **admin_orders.py** - Заказы
-34. **admin_products.py** - Товары
-35. **admin_promos.py** - Промокоды
-36. **admin_scheduler.py** - Планировщик
-37. **admin_services.py** - Услуги
-38. **admin_settings.py** - Настройки
-39. **admin_stats.py** - Статистика
-40. **admin_stones.py** - Управление камнями
-
----
-
-## 🗃️ СПИСОК ТАБЛИЦ БАЗЫ ДАННЫХ
-
-Из `src/database/models.py` и `src/database/init.py`:
-
-1. **users** - Пользователи
-2. **stones** - Камни
-3. **categories** - Категории камней
-4. **products** - Товары (браслеты)
-5. **orders** - Заказы
-6. **order_items** - Элементы заказов
-7. **cart** - Корзина
-8. **wishlist** - Избранное
-9. **music** - Музыкальные треки
-10. **workouts** - Практики
-11. **stories** - Истории
-12. **diagnostics** - Диагностики
-13. **services** - Услуги
-14. **bookings** - Бронирования
-15. **gifts** - Сертификаты
-16. **referrals** - Рефералы
-17. **promo_codes** - Промокоды
-18. **admin_logs** - Логи админа
+### Категория 5: Административные (12 handlers)
+| Файл | Назначение | Статус | Комментарий |
+|------|------------|--------|-------------|
+| `admin.py` | Главное админ-меню | ✅ Активен | Основа |
+| `admin_broadcast.py` | Рассылки | ✅ Активен | Коммуникации |
+| `admin_club.py` | Управление клубом | ✅ Активен | Монетизация |
+| `admin_content.py` | Управление контентом | ✅ Активен | Контент |
+| `admin_export.py` | Экспорт данных | ✅ Активен | Аналитика |
+| `admin_orders.py` | Управление заказами | ✅ Активен | Операции |
+| `admin_products.py` | Управление товарами | ✅ Активен | Каталог |
+| `admin_promos.py` | Промокоды | ✅ Активен | Маркетинг |
+| `admin_scheduler.py` | Расписание | ✅ Активен | Календарь |
+| `admin_services.py` | Управление услугами | ✅ Активен | Сервисы |
+| `admin_settings.py` | Настройки бота | ✅ Активен | Конфиг |
+| `admin_stats.py` | Статистика | ✅ Активен | Аналитика |
+| `admin_stones.py` | Управление камнями | ✅ Активен | Контент |
 
 ---
 
-## ⚙️ ТЕКУЩАЯ ЛОГИКА РАБОТЫ БОТА
+## 🔘 ПОЛНЫЙ СПИСОК КНОПОК (150+ callback_data)
 
-### Стартовый поток
+### Основное меню (get_main_keyboard)
 ```
-/start → Приветствие → Главное меню (get_main_keyboard)
-```
-
-### Основные сценарии
-
-#### 1. Подбор камня
-```
-ПОДОБРАТЬ МОЙ КАМЕНЬ → Квиз (5 вопросов) → Результат
-ТОТЕМНЫЙ КАМЕНЬ → Тотем-квиз → Результат
-СОВМЕСТИМОСТЬ КАМНЕЙ → Ввод камней → Анализ
-ПОИСК КАМНЯ → Поиск по названию → Результаты
-```
-
-#### 2. Покупки
-```
-ВИТРИНА → Список товаров → Добавить в корзину → Корзина → Оформить заказ
-КАСТОМНЫЙ ЗАКАЗ → Вопросы → Фото → Отправка мастеру
-```
-
-#### 3. Знания
-```
-БАЗА ЗНАНИЙ → Категории → Камни → Детали
-КАМЕНЬ ДНЯ → Случайный камень
-```
-
-#### 4. Услуги
-```
-ДИАГНОСТИКА → Фото + заметки → Отправка мастеру
-УСЛУГИ → Список услуг → Бронирование
-СЕРТИФИКАТЫ → Покупка сертификата
+💎 ВИТРИНА (showcase)
+🛒 КОРЗИНА (cart)
+🔮 ПОДОБРАТЬ МОЙ КАМЕНЬ (quiz)
+🦊 ТОТЕМНЫЙ КАМЕНЬ (totem)
+🗺 КАРТА ЖЕЛАНИЯ (wishmap)
+🔮 СОВМЕСТИМОСТЬ КАМНЕЙ (compatibility)
+🔍 ПОИСК КАМНЯ (search_stones)
+📚 БАЗА ЗНАНИЙ (knowledge)
+🌅 КАМЕНЬ ДНЯ (daily_stone)
+🩺 ДИАГНОСТИКА (diagnostic)
+✨ УСЛУГИ (services)
+💍 КАСТОМНЫЙ ЗАКАЗ (custom_order)
+🔥 МОЙ СТРИК (streak)
+🤖 СОВЕТ МАСТЕРА (ai_consult)
+🏃 МАРАФОН 21 ДЕНЬ (marathon)
+🌟 АСТРО-СОВЕТ (astro_advice)
+👤 МОЙ ПРОФИЛЬ (profile)
+🤝 РЕФЕРАЛЫ (referral)
+🔮 ПОРТАЛ СИЛЫ (club)
+🎁 СЕРТИФИКАТЫ (gifts)
+🎵 МУЗЫКА (music)
+🧘 ПРАКТИКИ (workouts)
+❓ FAQ (faq)
+📞 СВЯЗЬ С МАСТЕРОМ (contact_master)
 ```
 
-#### 5. Практики
+### Админ-меню (admin.py)
 ```
-МУЗЫКА → Список треков → Прослушивание
-ПРАКТИКИ → Список упражнений → Детали
-МАРАФОН → Участие в марафоне
-СТРИК → Отслеживание прогресса
-АСТРО-СОВЕТ → Совет по знаку зодиака
+📊 СТАТИСТИКА (admin_stats)
+📢 РАССЫЛКИ (admin_broadcast)
+📦 ЗАКАЗЫ (admin_orders)
+🛍 ПРОДУКТЫ (admin_products)
+💎 КАМНИ (admin_stones)
+📝 КОНТЕНТ (admin_content)
+🎫 ПРОМОКОДЫ (admin_promos)
+📅 РАСПИСАНИЕ (admin_scheduler)
+⚙️ НАСТРОЙКИ (admin_settings)
+📤 ЭКСПОРТ (admin_export)
+🔮 КЛУБ (admin_club)
+🤖 ИНФО О БОТЕ (admin_bot_info)
 ```
 
-#### 6. Профиль
+### Квиз и подбор (quiz.py, selector.py)
 ```
-МОЙ ПРОФИЛЬ → Информация + настройки
-РЕФЕРАЛЫ → Система приглашений
-ПОРТАЛ СИЛЫ → Клуб-функции
+♂️ МУЖСКОЙ (quiz_gender_male)
+♀️ ЖЕНСКИЙ (quiz_gender_female)
+🎁 В ПОДАРОК (quiz_gender_gift)
+sel_calm, sel_clarity, sel_energy, sel_health, sel_love, sel_money, sel_protect, sel_spirit
+co_q1, co_s_fight, co_s_growth, co_s_pain, co_s_search, co_s_stagnation, co_s_stress
+co_st_blue, co_st_dark, co_st_gold, co_st_pink, co_st_purple, co_st_trust
+co_sz_14, co_sz_15, co_sz_16, co_sz_17, co_sz_18, co_sz_19
+co_p_calm, co_p_energy, co_p_love, co_p_money, co_p_protect, co_p_spirit
+co_b_2k, co_b_5k, co_b_10k, co_b_max
 ```
 
-#### 7. Админ
+### Магазин и корзина (shop.py)
 ```
-/admin → Админ-меню → Выбор раздела → Управление
+cart_clear, checkout, enter_promo
+add_to_cart_{product_id}
+```
+
+### Клуб и подписки (club.py)
+```
+club_trial, club_buy_month, club_buy_year, club_content, club_back
+club_buy_{period}, club_item_{id}
+```
+
+### Диагностика (diagnostic.py)
+```
+diagnostic_pay
+```
+
+### Марафон (marathon.py)
+```
+marathon, marathon_pay, marathon_complete, marathon_day_1
+```
+
+### Профиль и рефералы (profile.py, referral)
+```
+referral, my_orders, my_bookings
+```
+
+### Админ-функции (все admin_*.py)
+```
+admin_menu, admin_stats, admin_broadcast, admin_orders, admin_products
+admin_stones, admin_content, admin_promos, admin_scheduler, admin_settings
+admin_export, admin_club, admin_bot_info
+# + специфические: admin_stone_add, admin_post_add, admin_promo_create, etc.
+```
+
+### Сервисы и бронирование (services.py)
+```
+booking_confirm, booking_cancel, my_bookings
+```
+
+### Истории (stories.py)
+```
+stories, story_create, story_approve_{id}, story_reject_{id}
+```
+
+### Админ экспорт (admin_export.py)
+```
+export_users, export_orders, export_products
+```
+
+### Админ заказы (admin_orders.py)
+```
+orders_list_all, orders_status_pending, orders_status_paid, orders_status_processing
+orders_status_shipped, orders_status_delivered, orders_status_cancelled
+```
+
+### Админ промокоды (admin_promos.py)
+```
+admin_promo_create, admin_promo_type_pct, admin_promo_type_rub
+admin_promo_edit_field_active, admin_promo_edit_field_desc, etc.
+```
+
+### Админ настройки (admin_settings.py)
+```
+settings_edit_cashback_percent, settings_edit_contact_address, settings_edit_contact_email
+settings_edit_contact_master, settings_edit_contact_phone, settings_edit_delivery_info
+settings_edit_return_text, settings_edit_welcome_text, settings_edit_working_hours
+```
+
+### Админ статистика (admin_stats.py)
+```
+stats_users, stats_orders, stats_products, stats_stones, stats_cashback, stats_forecast, stats_funnel
 ```
 
 ---
 
-## 🔧 ТЕХНИЧЕСКОЕ СОСТОЯНИЕ
+## 🔄 FSM СОСТОЯНИЯ (5 классов, 40+ состояний)
 
-### Рабочие компоненты
-- ✅ База данных (SQLite)
-- ✅ FSM состояния (MemoryStorage)
-- ✅ Rate limiting middleware
-- ✅ Логирование
-- ✅ Seed данные (камни, музыка, практики)
+### BaseInputStates (9 состояний)
+```
+waiting_name, waiting_emoji, waiting_description, waiting_price
+waiting_photo, waiting_text, waiting_number, waiting_confirm, waiting_code
+```
 
-### Потенциальные проблемы
-- ⚠️ 40+ состояний могут вызывать memory leaks при большом трафике
-- ⚠️ Дублирование логики между shop.py и products.py
-- ⚠️ User/Admin версии некоторых обработчиков (diagnostic, services)
-- ⚠️ Отсутствие persistent storage для корзины (теряется при перезапуске)
+### DiagnosticStates (3 состояния)
+```
+waiting_photo1, waiting_photo2, waiting_notes
+```
 
-### Рекомендации по оптимизации
-1. **Консолидировать состояния:** 40+ → 6-8 классов
-2. **Убрать дублирование:** products.py в shop.py
-3. **Мигрировать на Redis:** Для корзины и временных данных
-4. **Упростить архитектуру:** Убрать неиспользуемые обработчики
+### CustomOrderStates (7 состояний)
+```
+q1_purpose, q2_stones, q3_size, q4_notes, photo1, photo2
+```
+
+### QuizStates (6 состояний)
+```
+choosing_gender, q1, q2, q3, q4, q5
+```
+
+### TotemStates (6 состояний)
+```
+choosing_gender, q1, q2, q3, q4, q5
+```
+
+### StoryStates (2 состояния)
+```
+waiting_text, waiting_photo
+```
+
+### GiftStates (4 состояния)
+```
+waiting_amount, waiting_recipient, waiting_message, waiting_code
+```
+
+### BookingStates (5 состояний)
+```
+selecting_service, selecting_date, selecting_time, entering_comment, confirming
+```
+
+### AdminStates (25+ состояний)
+```
+# Общие
+waiting_text, waiting_confirm
+
+# Категории
+category_create_name, category_create_emoji, category_create_desc
+category_edit, category_edit_field
+
+# Браслеты
+bracelet_create_name, bracelet_create_price, bracelet_create_category
+bracelet_create_desc, bracelet_create_photo
+
+# Промокоды
+promo_create_type, promo_create_discount, promo_create_max_uses
+promo_create_expires, promo_create_description, promo_create_code
+promo_edit_field, promo_edit_value
+
+# Расписание
+schedule_add_date, schedule_add_time
+
+# Рассылки
+broadcast_text, broadcast_buttons, broadcast_button_text, broadcast_button_url
+broadcast_audience, broadcast_confirm
+
+# Диагностика
+diag_result, diag_service
+
+# Клуб
+club_edit_info, club_extend_days
+
+# Настройки
+settings_edit, settings_value
+```
 
 ---
 
-## 📈 СТАТИСТИКА ИСПОЛЬЗОВАНИЯ
+## 🗄 СТРУКТУРА БАЗЫ ДАННЫХ
 
-### По категориям кнопок
-- **Покупки:** 4 кнопки
-- **Подбор:** 4 кнопки  
-- **Знания:** 2 кнопки
-- **Услуги:** 3 кнопки
-- **Практики:** 4 кнопки
-- **Профиль:** 3 кнопки
-- **Прочее:** 4 кнопки
-- **Админ:** 8 кнопок
+### Основные таблицы
+```
+users (id, telegram_id, name, created_at, club_status, etc.)
+products (id, name, price, description, category_id, etc.)
+orders (id, user_id, status, total, created_at, etc.)
+stones (id, name, description, properties, chakra, etc.)
+categories (id, name, emoji, description)
+promocodes (id, code, discount, type, expires, max_uses)
+club_content (id, title, content, access_level, etc.)
+diagnostics (id, user_id, status, result, created_at)
+stories (id, user_id, text, photo, approved, created_at)
+bookings (id, user_id, service_id, date, time, status)
+```
 
-### По состояниям
-- **Базовые:** 9 состояний
-- **Диагностика:** 3 состояния
-- **Заказы:** 6 состояний
-- **Квизы:** 10 состояний
-- **Админ:** 20+ состояний
+### Специфические таблицы
+```
+music (id, name, description, audio_url, duration)
+workouts (id, name, description, difficulty, duration)
+marathon_progress (user_id, day, completed, completed_at)
+user_preferences (user_id, stone_size, bracelet_type, etc.)
+```
 
 ---
 
-## 🎯 ВЫВОДЫ АУДИТА
+## ⚡ ПРОБЛЕМЫ И РЕКОМЕНДАЦИИ
 
-**Сильные стороны:**
-- Полнофункциональный бот с широким спектром услуг
-- Хорошая структура кода (роутеры, клавиатуры, состояния)
-- Интеграция с БД и middleware
+### 1. Дублирование обработчиков
+**Проблема:** shop.py и products.py делают похожие вещи
+**Решение:** Консолидировать в один shop.py
 
-**Слабые стороны:**
-- Избыточная сложность (40+ handlers/states)
-- Потенциальные memory leaks
-- Дублирование кода
+### 2. Слишком много состояний
+**Проблема:** 40+ состояний сложно поддерживать
+**Решение:** Упростить до 10-15 ключевых состояний
 
-**Рекомендации:**
-- Оптимизировать до 25-28 handlers
-- Упростить states до 6-8 классов
-- Добавить Redis для persistent данных
-- Убрать мертвый код (если есть)
+### 3. Сложная навигация
+**Проблема:** Глубокие деревья меню путают пользователей
+**Решение:** Ввести "хлебные крошки" и упростить меню
 
-**Текущее состояние:** ✅ РАБОТАЕТ СТАБИЛЬНО
+### 4. Отсутствие единой обработки ошибок
+**Проблема:** Каждый handler обрабатывает ошибки по-своему
+**Решение:** Ввести middleware для обработки ошибок
+
+### 5. Производительность
+**Проблема:** Много запросов к БД без кеширования
+**Решение:** Ввести Redis для часто используемых данных
+
+---
+
+## 📈 СТАТИСТИКА КОДА
+
+| Метрика | Значение | Комментарий |
+|---------|----------|-------------|
+| Python файлов | 40+ | handlers + keyboards + states |
+| Строк кода | ~15,000 | Примерная оценка |
+| Callback_data | 150+ | Уникальных значений |
+| FSM состояний | 40+ | В 5 классах |
+| Таблиц БД | 20+ | Основные + специфические |
+| Активных пользователей | ? | Требует проверки |
+| Конверсия в продажи | ? | Требует аналитики |
+
+---
+
+## 🎯 РЕКОМЕНДАЦИИ ПО ОПТИМИЗАЦИИ
+
+### Фаза 1: Консолидация (1-2 недели)
+- [ ] Объединить shop.py + products.py
+- [ ] Упростить состояния FSM
+- [ ] Ввести единый паттерн обработки
+
+### Фаза 2: Упрощение (2-3 недели)
+- [ ] Убрать дублирующие кнопки
+- [ ] Оптимизировать навигацию
+- [ ] Добавить кеширование
+
+### Фаза 3: Масштабирование (1-2 недели)
+- [ ] Ввести middleware
+- [ ] Оптимизировать БД запросы
+- [ ] Добавить мониторинг
+
+---
+
+## 🔧 ТЕХНИЧЕСКИЕ ДОЛГИ
+
+1. **Безопасность:** Проверить валидацию входных данных
+2. **Производительность:** Оптимизировать запросы к БД
+3. **Масштабируемость:** Подготовить к росту пользователей
+4. **Мониторинг:** Добавить логирование и метрики
+5. **Тестирование:** Написать unit и integration тесты
+
+---
+
+## 📋 ЧЕК-ЛИСТ ДЛЯ РАЗРАБОТЧИКА
+
+- [ ] Провести рефакторинг handlers
+- [ ] Упростить FSM состояния
+- [ ] Оптимизировать callback_data
+- [ ] Добавить кеширование Redis
+- [ ] Ввести middleware для ошибок
+- [ ] Написать тесты
+- [ ] Добавить мониторинг
+- [ ] Оптимизировать БД запросы
+
+---
+
+**Заключение:** Бот функционален и имеет богатый функционал, но требует оптимизации для лучшей поддерживаемости и производительности.</content>
+<parameter name="filePath">/workspaces/zero-zero/FULL_BOT_AUDIT.md
