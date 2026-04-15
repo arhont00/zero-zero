@@ -149,6 +149,52 @@ function createSiteEntryPopup() {
   requestAnimationFrame(() => overlay.classList.add('visible'));
 }
 
+// ── CHAT ────────────────────────────────────────
+async function submitChat(e) {
+  e.preventDefault();
+  const form = e.target;
+  const input = form.querySelector('#chat-input');
+  const btn = form.querySelector('button');
+  const message = input.value.trim();
+  if (!message) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Отправляем...';
+
+  try {
+    const res = await fetch('/api/chat-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      addChatMessage('Вы', message);
+      addChatMessage('Мастер', 'Спасибо за вопрос! Мастер ответит в течение 24 часов.');
+      input.value = '';
+    } else {
+      alert(result.error || 'Ошибка отправки.');
+    }
+  } catch(e) {
+    alert('Ошибка соединения.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Отправить';
+  }
+}
+
+function addChatMessage(sender, text) {
+  const messages = document.getElementById('chat-messages');
+  if (!messages) return;
+
+  const msg = document.createElement('div');
+  msg.className = 'chat-message';
+  msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
+  messages.appendChild(msg);
+  messages.scrollTop = messages.scrollHeight;
+}
+
 // ── INIT ──────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   quiz.init();
@@ -158,6 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const orderForm = document.getElementById('order-form');
   if (orderForm) orderForm.addEventListener('submit', submitOrder);
+
+  const chatForm = document.getElementById('chat-form');
+  if (chatForm) chatForm.addEventListener('submit', submitChat);
 
   // Отметить активную ссылку
   const path = location.pathname;
