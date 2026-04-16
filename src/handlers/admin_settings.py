@@ -7,7 +7,6 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKe
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-from src.database.db import db
 from src.database.models import UserModel, SettingsModel
 from src.utils.helpers import escape_markdown
 
@@ -25,9 +24,9 @@ async def admin_settings(callback: CallbackQuery):
     if not UserModel.is_admin(callback.from_user.id):
         await callback.answer("❌ Нет прав")
         return
-    
+
     settings = SettingsModel.get_all()
-    
+
     text = (
         "⚙️ *ОБЩИЕ НАСТРОЙКИ БОТА*\n\n"
         f"👋 *Приветствие новых:*\n{escape_markdown(settings['welcome_text'][:100])}...\n\n"
@@ -36,7 +35,7 @@ async def admin_settings(callback: CallbackQuery):
         f"📞 *Контакты мастера:* {settings['contact_master']}\n"
         f"🚚 *Информация о доставке:*\n{escape_markdown(settings['delivery_info'][:50])}...\n"
     )
-    
+
     buttons = [
         [InlineKeyboardButton(text="👋 Приветствие новых", callback_data="settings_edit_welcome_text")],
         [InlineKeyboardButton(text="🔄 Приветствие вернувшихся", callback_data="settings_edit_return_text")],
@@ -47,7 +46,7 @@ async def admin_settings(callback: CallbackQuery):
         [InlineKeyboardButton(text="📸 Инструкции по фото", callback_data="admin_photo_guide")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_menu")]
     ]
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -58,7 +57,7 @@ async def settings_edit(callback: CallbackQuery, state: FSMContext):
     setting_key = callback.data.replace("settings_edit_", "")
     await state.update_data(setting_key=setting_key)
     await state.set_state(SettingsStates.waiting_setting_value)
-    
+
     prompts = {
         'welcome_text': '✏️ Введите новый текст приветствия для новых пользователей:',
         'return_text': '✏️ Введите новый текст приветствия для вернувшихся пользователей:',
@@ -71,7 +70,7 @@ async def settings_edit(callback: CallbackQuery, state: FSMContext):
         'contact_address': '✏️ Введите адрес (или напишите "онлайн"):',
         'working_hours': '✏️ Введите часы работы (например: Ежедневно 10:00-22:00):'
     }
-    
+
     await callback.message.edit_text(prompts.get(setting_key, "Введите новое значение:"))
     await callback.answer()
 
@@ -82,7 +81,7 @@ async def settings_save(message: Message, state: FSMContext):
     data = await state.get_data()
     setting_key = data['setting_key']
     new_value = message.text
-    
+
     # Валидация для числовых полей
     if setting_key in ['cashback_percent', 'min_order_for_cashback']:
         try:
@@ -90,10 +89,10 @@ async def settings_save(message: Message, state: FSMContext):
         except ValueError:
             await message.answer("❌ Введите число!")
             return
-    
+
     success = SettingsModel.set(setting_key, new_value)
     await state.clear()
-    
+
     if success:
         await message.answer(
             f"✅ *Настройка {setting_key} обновлена!*",
@@ -112,6 +111,7 @@ async def settings_save(message: Message, state: FSMContext):
 # ──────────────────────────────────────────────────────────────
 # УПРАВЛЕНИЕ ФОТО И ИНСТРУКЦИЯМИ ДЛЯ КЛИЕНТОВ
 # ──────────────────────────────────────────────────────────────
+
 
 @router.callback_query(F.data == "admin_photo_guide")
 async def admin_photo_guide(callback: CallbackQuery):

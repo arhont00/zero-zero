@@ -15,7 +15,7 @@ router = Router()
 async def faq_list(callback: CallbackQuery):
     """Список вопросов и ответов."""
     faqs = FAQModel.get_all(active_only=True)
-    
+
     if not faqs:
         await callback.message.edit_text(
             "❓ *ЧАСТО ЗАДАВАЕМЫЕ ВОПРОСЫ*\n\n"
@@ -26,13 +26,13 @@ async def faq_list(callback: CallbackQuery):
         )
         await callback.answer()
         return
-    
+
     text = "❓ *ЧАСТО ЗАДАВАЕМЫЕ ВОПРОСЫ*\n\n"
-    
+
     for faq in faqs:
         text += f"*Q: {faq['question']}*\n"
         text += f"A: {faq['answer']}\n\n"
-    
+
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[

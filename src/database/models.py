@@ -2,36 +2,36 @@
 Модели данных (Data Access Objects).
 Каждый класс отвечает за работу с одной таблицей.
 """
-import json
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Tuple
 from src.database.db import db
 
+
 class UserModel:
     """Работа с таблицей users."""
-    
+
     TABLE = "users"
-    
+
     @staticmethod
     def get(user_id: int) -> Optional[Dict[str, Any]]:
         with db.cursor() as c:
             c.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
             row = c.fetchone()
             return dict(row) if row else None
-    
+
     @staticmethod
     def create_or_update(user_id: int, username: str, first_name: str, referred_by: Optional[int] = None) -> bool:
         with db.connection() as conn:
             c = conn.cursor()
             c.execute("""
-                INSERT INTO users (user_id, username, first_name, created_at, referred_by) 
+                INSERT INTO users (user_id, username, first_name, created_at, referred_by)
                 VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(user_id) DO UPDATE SET
                     username = excluded.username,
                     first_name = excluded.first_name
             """, (user_id, username, first_name, datetime.now(), referred_by))
             return c.rowcount > 0
-    
+
     @staticmethod
     def is_admin(user_id: int) -> bool:
         from src.config import Config
@@ -40,20 +40,20 @@ class UserModel:
         with db.cursor() as c:
             c.execute("SELECT 1 FROM admins WHERE admin_id = ?", (user_id,))
             return c.fetchone() is not None
-    
+
     @staticmethod
     def set_birthday(user_id: int, birthday: str) -> bool:
         with db.cursor() as c:
             c.execute("UPDATE users SET birthday = ? WHERE user_id = ?", (birthday, user_id))
             return c.rowcount > 0
-    
+
     @staticmethod
     def get_bonus_balance(user_id: int) -> float:
         with db.cursor() as c:
             c.execute("SELECT balance FROM referral_balance WHERE user_id = ?", (user_id,))
             row = c.fetchone()
             return float(row['balance']) if row else 0.0
-    
+
     @staticmethod
     def get_all(limit: int = 1000) -> List[Dict]:
         with db.cursor() as c:
@@ -63,19 +63,19 @@ class UserModel:
 
 class AdminModel:
     """Работа с таблицей admins."""
-    
+
     @staticmethod
     def add(admin_id: int) -> bool:
         with db.cursor() as c:
             c.execute("INSERT OR IGNORE INTO admins (admin_id) VALUES (?)", (admin_id,))
             return c.rowcount > 0
-    
+
     @staticmethod
     def remove(admin_id: int) -> bool:
         with db.cursor() as c:
             c.execute("DELETE FROM admins WHERE admin_id = ?", (admin_id,))
             return c.rowcount > 0
-    
+
     @staticmethod
     def get_all() -> List[int]:
         with db.cursor() as c:
@@ -85,20 +85,20 @@ class AdminModel:
 
 class CategoryModel:
     """Работа с категориями."""
-    
+
     @staticmethod
     def get_all() -> List[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM categories ORDER BY id")
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_by_id(category_id: int) -> Optional[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM categories WHERE id = ?", (category_id,))
             row = c.fetchone()
             return dict(row) if row else None
-    
+
     @staticmethod
     def create(name: str, emoji: str = "📦", description: str = "") -> int:
         with db.cursor() as c:
@@ -106,7 +106,7 @@ class CategoryModel:
                 INSERT INTO categories (name, emoji, description) VALUES (?, ?, ?)
             """, (name, emoji, description))
             return c.lastrowid
-    
+
     @staticmethod
     def update(category_id: int, **kwargs) -> bool:
         allowed = ['name', 'emoji', 'description']
@@ -122,7 +122,7 @@ class CategoryModel:
         with db.cursor() as c:
             c.execute(f"UPDATE categories SET {', '.join(updates)} WHERE id = ?", params)
             return c.rowcount > 0
-    
+
     @staticmethod
     def delete(category_id: int) -> bool:
         # Проверяем, есть ли товары в категории
@@ -132,7 +132,7 @@ class CategoryModel:
                 return False
             c.execute("DELETE FROM categories WHERE id = ?", (category_id,))
             return c.rowcount > 0
-    
+
     @staticmethod
     def get_products(category_id: int) -> List[Dict]:
         with db.cursor() as c:
@@ -157,14 +157,14 @@ class CategoryModel:
 
 class BraceletModel:
     """Работа с браслетами."""
-    
+
     @staticmethod
     def get_by_id(item_id: int) -> Optional[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM bracelets WHERE id = ?", (item_id,))
             row = c.fetchone()
             return dict(row) if row else None
-    
+
     @staticmethod
     def get_all(category_id: Optional[int] = None) -> List[Dict]:
         with db.cursor() as c:
@@ -173,7 +173,7 @@ class BraceletModel:
             else:
                 c.execute("SELECT * FROM bracelets ORDER BY created_at DESC LIMIT 50")
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def create(name: str, price: float, category_id: int, description: str = "", image_url: str = "") -> int:
         with db.cursor() as c:
@@ -182,7 +182,7 @@ class BraceletModel:
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (name, description, price, image_url, category_id, datetime.now()))
             return c.lastrowid
-    
+
     @staticmethod
     def update(bracelet_id: int, **kwargs) -> bool:
         allowed = ['name', 'description', 'price', 'image_url', 'category_id']
@@ -198,7 +198,7 @@ class BraceletModel:
         with db.cursor() as c:
             c.execute(f"UPDATE bracelets SET {', '.join(updates)} WHERE id = ?", params)
             return c.rowcount > 0
-    
+
     @staticmethod
     def delete(bracelet_id: int) -> bool:
         with db.cursor() as c:
@@ -212,13 +212,13 @@ class BraceletModel:
 
 class ShowcaseCollectionModel:
     """Коллекции витрины."""
-    
+
     @staticmethod
     def get_all() -> List[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM showcase_collections ORDER BY sort_order, id")
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def create(name: str, emoji: str = "💎", description: str = "") -> int:
         with db.cursor() as c:
@@ -231,7 +231,7 @@ class ShowcaseCollectionModel:
 
 class ShowcaseItemModel:
     """Товары витрины."""
-    
+
     @staticmethod
     def get_by_id(item_id: int) -> Optional[Dict]:
         real_id = item_id - 100000 if item_id >= 100000 else item_id
@@ -239,7 +239,7 @@ class ShowcaseItemModel:
             c.execute("SELECT * FROM showcase_items WHERE id = ?", (real_id,))
             row = c.fetchone()
             return dict(row) if row else None
-    
+
     @staticmethod
     def get_all(collection_id: Optional[int] = None) -> List[Dict]:
         with db.cursor() as c:
@@ -248,16 +248,22 @@ class ShowcaseItemModel:
             else:
                 c.execute("SELECT * FROM showcase_items ORDER BY created_at DESC LIMIT 50")
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
-    def create(collection_id: int, name: str, price: float, description: str = "", image_file_id: str = "", stars_price: int = 0) -> int:
+    def create(
+            collection_id: int,
+            name: str,
+            price: float,
+            description: str = "",
+            image_file_id: str = "",
+            stars_price: int = 0) -> int:
         with db.cursor() as c:
             c.execute("""
                 INSERT INTO showcase_items (collection_id, name, description, price, stars_price, image_file_id, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (collection_id, name, description, price, stars_price, image_file_id, datetime.now()))
             return c.lastrowid
-    
+
     @staticmethod
     def update(item_id: int, **kwargs) -> bool:
         allowed = ['name', 'description', 'price', 'stars_price', 'image_file_id', 'collection_id', 'sort_order']
@@ -273,7 +279,7 @@ class ShowcaseItemModel:
         with db.cursor() as c:
             c.execute(f"UPDATE showcase_items SET {', '.join(updates)} WHERE id = ?", params)
             return c.rowcount > 0
-    
+
     @staticmethod
     def delete(item_id: int) -> bool:
         with db.cursor() as c:
@@ -283,7 +289,7 @@ class ShowcaseItemModel:
 
 class ItemInfo:
     """Получение информации о товаре по ID."""
-    
+
     @staticmethod
     def get_info(item_id: int) -> Tuple[str, float, str]:
         if item_id >= 100000:
@@ -300,16 +306,16 @@ class ItemInfo:
                 if row:
                     return row['name'], float(row['price'] or 0), 'bracelet'
         return f"Товар #{item_id}", 0.0, 'unknown'
-    
+
     @staticmethod
     def format_price(price: float) -> str:
         return f"{price:.0f}₽" if price else "цена уточняется"
-    
+
     @staticmethod
     def get_name(item_id: int) -> str:
         name, _, _ = ItemInfo.get_info(item_id)
         return name
-    
+
     @staticmethod
     def get_price(item_id: int) -> float:
         _, price, _ = ItemInfo.get_info(item_id)
@@ -318,7 +324,7 @@ class ItemInfo:
 
 class CartModel:
     """Работа с корзиной."""
-    
+
     @staticmethod
     def get_active(user_id: int) -> List[Dict]:
         """Получить корзину — поддерживает и браслеты и товары витрины."""
@@ -344,7 +350,7 @@ class CartModel:
             showcase_items = [dict(r) for r in c.fetchall()]
 
         return bracelet_items + showcase_items
-    
+
     @staticmethod
     def add(user_id: int, bracelet_id: int, quantity: int = 1) -> bool:
         if quantity <= 0:
@@ -352,7 +358,7 @@ class CartModel:
         with db.connection() as conn:
             c = conn.cursor()
             c.execute("""
-                SELECT id, quantity FROM cart 
+                SELECT id, quantity FROM cart
                 WHERE user_id = ? AND bracelet_id = ? AND status = 'active'
             """, (user_id, bracelet_id))
             existing = c.fetchone()
@@ -361,23 +367,23 @@ class CartModel:
                 c.execute("UPDATE cart SET quantity = ? WHERE id = ?", (new_qty, existing['id']))
             else:
                 c.execute("""
-                    INSERT INTO cart (user_id, bracelet_id, quantity, added_at, status) 
+                    INSERT INTO cart (user_id, bracelet_id, quantity, added_at, status)
                     VALUES (?, ?, ?, ?, 'active')
                 """, (user_id, bracelet_id, quantity, datetime.now()))
             return True
-    
+
     @staticmethod
     def remove(cart_id: int) -> bool:
         with db.cursor() as c:
             c.execute("DELETE FROM cart WHERE id = ?", (cart_id,))
             return c.rowcount > 0
-    
+
     @staticmethod
     def clear(user_id: int) -> bool:
         with db.cursor() as c:
             c.execute("DELETE FROM cart WHERE user_id = ? AND status = 'active'", (user_id,))
             return True
-    
+
     @staticmethod
     def get_total(user_id: int) -> Tuple[float, List[Dict]]:
         items = CartModel.get_active(user_id)
@@ -387,7 +393,7 @@ class CartModel:
 
 class OrderModel:
     """Работа с заказами."""
-    
+
     @staticmethod
     def create(user_id: int, total: float, payment_method: str, promo_code: str = None, bonus_used: float = 0) -> int:
         with db.cursor() as c:
@@ -396,7 +402,7 @@ class OrderModel:
                 VALUES (?, ?, 'pending', ?, ?, ?, ?)
             """, (user_id, total, payment_method, promo_code, bonus_used, datetime.now()))
             return c.lastrowid
-    
+
     @staticmethod
     def add_item(order_id: int, user_id: int, item_id: int, item_name: str, quantity: int, price: float):
         item_type = 'showcase' if item_id >= 100000 else 'bracelet'
@@ -406,7 +412,7 @@ class OrderModel:
                 INSERT INTO order_items (order_id, user_id, item_type, item_id, item_name, quantity, price, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (order_id, user_id, item_type, real_id, item_name, quantity, price, datetime.now()))
-    
+
     @staticmethod
     def get_user_orders(user_id: int, limit: int = 10) -> List[Dict]:
         with db.cursor() as c:
@@ -418,7 +424,7 @@ class OrderModel:
                 LIMIT ?
             """, (user_id, limit))
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_by_id(order_id: int) -> Optional[Dict]:
         with db.cursor() as c:
@@ -430,19 +436,19 @@ class OrderModel:
             """, (order_id,))
             row = c.fetchone()
             return dict(row) if row else None
-    
+
     @staticmethod
     def get_items(order_id: int) -> List[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM order_items WHERE order_id = ?", (order_id,))
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def update_status(order_id: int, status: str) -> bool:
         with db.cursor() as c:
             c.execute("UPDATE orders SET status = ? WHERE id = ?", (status, order_id))
             return c.rowcount > 0
-    
+
     @staticmethod
     def get_all(limit: int = 50, offset: int = 0, status: Optional[str] = None) -> List[Dict]:
         with db.cursor() as c:
@@ -460,7 +466,7 @@ class OrderModel:
             params.extend([limit, offset])
             c.execute(query, params)
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_stats_by_status() -> Dict[str, int]:
         with db.cursor() as c:
@@ -470,13 +476,13 @@ class OrderModel:
 
 class PromoModel:
     """Работа с промокодами."""
-    
+
     @staticmethod
     def check(code: str, user_id: int) -> Dict[str, Any]:
         with db.cursor() as c:
             c.execute("""
-                SELECT * FROM promocodes 
-                WHERE code = ? AND active = 1 
+                SELECT * FROM promocodes
+                WHERE code = ? AND active = 1
                 AND (max_uses = 0 OR used_count < max_uses)
                 AND (expires_at IS NULL OR expires_at > datetime('now'))
             """, (code.upper(),))
@@ -491,30 +497,30 @@ class PromoModel:
                 'discount_pct': promo['discount_pct'],
                 'discount_rub': promo['discount_rub']
             }
-    
+
     @staticmethod
     def use(code: str, user_id: int):
         with db.connection() as conn:
             c = conn.cursor()
             c.execute("UPDATE promocodes SET used_count = used_count + 1 WHERE code = ?", (code.upper(),))
-            c.execute("INSERT INTO promo_uses (user_id, code, used_at) VALUES (?, ?, ?)", 
+            c.execute("INSERT INTO promo_uses (user_id, code, used_at) VALUES (?, ?, ?)",
                       (user_id, code.upper(), datetime.now()))
-    
+
     @staticmethod
     def get_all() -> List[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM promocodes ORDER BY created_at DESC")
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_by_code(code: str) -> Optional[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM promocodes WHERE code = ?", (code.upper(),))
             row = c.fetchone()
             return dict(row) if row else None
-    
+
     @staticmethod
-    def create(code: str, discount_pct: int = 0, discount_rub: int = 0, max_uses: int = 0, 
+    def create(code: str, discount_pct: int = 0, discount_rub: int = 0, max_uses: int = 0,
                expires_days: int = 0, description: str = "") -> int:
         code = code.upper()
         expires_at = None
@@ -526,7 +532,7 @@ class PromoModel:
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (code, discount_pct, discount_rub, max_uses, expires_at, description, datetime.now()))
             return c.lastrowid
-    
+
     @staticmethod
     def update(code: str, **kwargs) -> bool:
         allowed = ['discount_pct', 'discount_rub', 'max_uses', 'active', 'expires_at', 'description']
@@ -542,7 +548,7 @@ class PromoModel:
         with db.cursor() as c:
             c.execute(f"UPDATE promocodes SET {', '.join(updates)} WHERE code = ?", params)
             return c.rowcount > 0
-    
+
     @staticmethod
     def delete(code: str) -> bool:
         with db.connection() as conn:
@@ -550,7 +556,7 @@ class PromoModel:
             c.execute("DELETE FROM promo_uses WHERE code = ?", (code.upper(),))
             c.execute("DELETE FROM promocodes WHERE code = ?", (code.upper(),))
             return True
-    
+
     @staticmethod
     def get_usage_stats(code: str) -> Dict:
         with db.cursor() as c:
@@ -577,7 +583,7 @@ class PromoModel:
 
 class DiagnosticModel:
     """Работа с диагностикой."""
-    
+
     @staticmethod
     def create(user_id: int, notes: str, photo1: str, photo2: Optional[str] = None) -> int:
         with db.cursor() as c:
@@ -586,7 +592,7 @@ class DiagnosticModel:
                 VALUES (?, ?, ?, ?, ?, ?, 0)
             """, (user_id, 2 if photo2 else 1, notes, photo1, photo2, datetime.now()))
             return c.lastrowid
-    
+
     @staticmethod
     def get_pending() -> List[Dict]:
         with db.cursor() as c:
@@ -598,7 +604,7 @@ class DiagnosticModel:
                 ORDER BY d.created_at ASC
             """)
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_all(limit: int = 50) -> List[Dict]:
         with db.cursor() as c:
@@ -610,14 +616,14 @@ class DiagnosticModel:
                 LIMIT ?
             """, (limit,))
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_by_id(diag_id: int) -> Optional[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM diagnostics WHERE id = ?", (diag_id,))
             row = c.fetchone()
             return dict(row) if row else None
-    
+
     @staticmethod
     def set_result(diag_id: int, result: str) -> bool:
         with db.cursor() as c:
@@ -625,11 +631,9 @@ class DiagnosticModel:
             return c.rowcount > 0
 
 
-
-
 class WorkoutModel:
     """Тренировки."""
-    
+
     @staticmethod
     def get_all() -> List[Dict]:
         with db.cursor() as c:
@@ -639,7 +643,7 @@ class WorkoutModel:
 
 class ServiceModel:
     """Услуги."""
-    
+
     @staticmethod
     def get_all(active_only: bool = True) -> List[Dict]:
         with db.cursor() as c:
@@ -650,7 +654,7 @@ class ServiceModel:
             query += " ORDER BY sort_order, price"
             c.execute(query, params)
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_by_id(service_id: int) -> Optional[Dict]:
         with db.cursor() as c:
@@ -661,7 +665,7 @@ class ServiceModel:
 
 class ScheduleModel:
     """Расписание слотов."""
-    
+
     @staticmethod
     def get_available(days_ahead: int = 14) -> List[Dict]:
         with db.cursor() as c:
@@ -673,7 +677,7 @@ class ScheduleModel:
                 ORDER BY slot_date, time_slot
             """, (f'+{days_ahead} days',))
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def book(slot_id: int, user_id: int) -> bool:
         with db.connection() as conn:
@@ -684,7 +688,7 @@ class ScheduleModel:
                 WHERE id = ? AND available = 1
             """, (user_id, datetime.now(), slot_id))
             return c.rowcount > 0
-    
+
     @staticmethod
     def release(slot_id: int):
         with db.cursor() as c:
@@ -693,7 +697,7 @@ class ScheduleModel:
                 SET available = 1, booked_by = NULL, booked_at = NULL
                 WHERE id = ?
             """, (slot_id,))
-    
+
     @staticmethod
     def get_by_id(slot_id: int) -> Optional[Dict]:
         with db.cursor() as c:
@@ -704,7 +708,7 @@ class ScheduleModel:
 
 class ConsultationModel:
     """Записи на консультации/услуги."""
-    
+
     @staticmethod
     def create(user_id: int, service_id: int, slot_id: int, comment: str = "") -> int:
         with db.cursor() as c:
@@ -713,7 +717,7 @@ class ConsultationModel:
                 VALUES (?, ?, ?, ?, 'pending', ?)
             """, (user_id, service_id, slot_id, comment, datetime.now()))
             return c.lastrowid
-    
+
     @staticmethod
     def get_user_consultations(user_id: int) -> List[Dict]:
         with db.cursor() as c:
@@ -726,14 +730,14 @@ class ConsultationModel:
                 ORDER BY sl.slot_date DESC, sl.time_slot DESC
             """, (user_id,))
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_by_id(consult_id: int) -> Optional[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM consultations WHERE id = ?", (consult_id,))
             row = c.fetchone()
             return dict(row) if row else None
-    
+
     @staticmethod
     def update_status(consult_id: int, status: str) -> bool:
         with db.cursor() as c:
@@ -758,7 +762,7 @@ class ConsultationModel:
 
 class GiftModel:
     """Подарочные сертификаты."""
-    
+
     @staticmethod
     def generate_code() -> str:
         import random
@@ -767,7 +771,7 @@ class GiftModel:
         timestamp = datetime.now().strftime("%y%m")
         random_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         return f"{prefix}-{timestamp}-{random_part}"
-    
+
     @staticmethod
     def create(buyer_id: int, amount: float, recipient_name: str, message: str = "") -> str:
         code = GiftModel.generate_code()
@@ -778,13 +782,13 @@ class GiftModel:
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (code, amount, buyer_id, recipient_name, message, datetime.now(), expires_at))
             return code
-    
+
     @staticmethod
     def apply(code: str, user_id: int) -> Optional[float]:
         with db.connection() as conn:
             c = conn.cursor()
             c.execute("""
-                SELECT id, amount FROM gift_certificates 
+                SELECT id, amount FROM gift_certificates
                 WHERE code = ? AND status = 'active' AND expires_at > datetime('now')
             """, (code,))
             cert = c.fetchone()
@@ -809,20 +813,20 @@ class GiftModel:
 
 class WishlistModel:
     """Избранное."""
-    
+
     @staticmethod
     def add(user_id: int, item_id: int) -> bool:
         with db.cursor() as c:
             c.execute("INSERT OR IGNORE INTO wishlist (user_id, item_id, added_at) VALUES (?, ?, ?)",
                       (user_id, item_id, datetime.now()))
             return c.rowcount > 0
-    
+
     @staticmethod
     def remove(user_id: int, item_id: int) -> bool:
         with db.cursor() as c:
             c.execute("DELETE FROM wishlist WHERE user_id = ? AND item_id = ?", (user_id, item_id))
             return c.rowcount > 0
-    
+
     @staticmethod
     def get_all(user_id: int) -> List[Dict]:
         with db.cursor() as c:
@@ -838,7 +842,7 @@ class WishlistModel:
 
 class FAQModel:
     """Часто задаваемые вопросы."""
-    
+
     @staticmethod
     def get_all(active_only: bool = True) -> List[Dict]:
         with db.cursor() as c:
@@ -852,27 +856,25 @@ class FAQModel:
 
 class KnowledgeModel:
     """База знаний о камнях."""
-    
+
     @staticmethod
     def get_all() -> List[Dict]:
         with db.cursor() as c:
             c.execute("SELECT id, stone_name, emoji FROM knowledge ORDER BY stone_name")
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_by_id(stone_id: str) -> Optional[Dict]:
         with db.cursor() as c:
-            c.execute("SELECT * FROM knowledge WHERE stone_id = ? OR LOWER(stone_name) LIKE ?", 
+            c.execute("SELECT * FROM knowledge WHERE stone_id = ? OR LOWER(stone_name) LIKE ?",
                       (stone_id, f'%{stone_id}%'))
             row = c.fetchone()
             return dict(row) if row else None
 
 
-
-
 class StoryModel:
     """Истории клиентов."""
-    
+
     @staticmethod
     def create(user_id: int, story_text: str, photo_file_id: Optional[str] = None) -> int:
         with db.cursor() as c:
@@ -881,7 +883,7 @@ class StoryModel:
                 VALUES (?, ?, ?, ?)
             """, (user_id, story_text, photo_file_id, datetime.now()))
             return c.lastrowid
-    
+
     @staticmethod
     def get_pending() -> List[Dict]:
         with db.cursor() as c:
@@ -893,7 +895,7 @@ class StoryModel:
                 ORDER BY s.created_at ASC
             """)
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_approved(limit: int = 10) -> List[Dict]:
         with db.cursor() as c:
@@ -906,13 +908,13 @@ class StoryModel:
                 LIMIT ?
             """, (limit,))
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def approve(story_id: int) -> bool:
         with db.cursor() as c:
             c.execute("UPDATE stories SET approved = 1 WHERE id = ?", (story_id,))
             return c.rowcount > 0
-    
+
     @staticmethod
     def reject(story_id: int) -> bool:
         with db.cursor() as c:
@@ -922,7 +924,7 @@ class StoryModel:
 
 class ReferralModel:
     """Реферальная система."""
-    
+
     @staticmethod
     def add(referrer_id: int, referred_id: int) -> bool:
         with db.connection() as conn:
@@ -941,10 +943,9 @@ class ReferralModel:
             return True
 
 
-
 class ScheduledPostModel:
     """Планировщик постов."""
-    
+
     @staticmethod
     def create(post_id: str, scheduled_time: str, channel_id: Optional[str] = None) -> int:
         with db.cursor() as c:
@@ -953,25 +954,25 @@ class ScheduledPostModel:
                 VALUES (?, ?, ?, ?)
             """, (post_id, channel_id or '', scheduled_time, datetime.now()))
             return c.lastrowid
-    
+
     @staticmethod
     def get_pending() -> List[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM scheduled_posts WHERE status = 'pending' ORDER BY scheduled_time")
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def get_all(limit: int = 50) -> List[Dict]:
         with db.cursor() as c:
             c.execute("SELECT * FROM scheduled_posts ORDER BY scheduled_time DESC LIMIT ?", (limit,))
             return [dict(row) for row in c.fetchall()]
-    
+
     @staticmethod
     def mark_published(post_id: int):
         with db.cursor() as c:
             c.execute("UPDATE scheduled_posts SET status = 'published', published_at = ? WHERE id = ?",
                       (datetime.now(), post_id))
-    
+
     @staticmethod
     def mark_failed(post_id: int, error: str):
         with db.cursor() as c:
@@ -980,7 +981,7 @@ class ScheduledPostModel:
 
 class FunnelModel:
     """Статистика воронки."""
-    
+
     @staticmethod
     def track(user_id: int, event_type: str, details: str = None):
         with db.cursor() as c:
@@ -988,7 +989,7 @@ class FunnelModel:
                 INSERT INTO funnel_stats (user_id, event_type, details, created_at)
                 VALUES (?, ?, ?, ?)
             """, (user_id, event_type, details, datetime.now()))
-    
+
     @staticmethod
     def get_stats(days: int = 30) -> Dict[str, int]:
         events = ['start', 'view_showcase', 'view_product', 'add_to_cart', 'checkout', 'payment_success']
@@ -1006,16 +1007,15 @@ class FunnelModel:
 
 class SettingsModel:
     """Настройки бота."""
-    
+
     DEFAULT = {
         'welcome_text': '🌟 ДОБРО ПОЖАЛОВАТЬ В МИР МАГИИ КАМНЕЙ!\n\nЯ помогу найти браслет или чётки, которые подойдут именно вам.\n\n🎁 СКИДКА 20% на первый заказ!\nПромокод: WELCOME20\n\nВыберите раздел 👇',
         'return_text': '👋 С возвращением! Выбери раздел:',
         'cashback_percent': '5',
         'min_order_for_cashback': '0',
         'contact_master': '@master',
-        'delivery_info': '🚚 Доставка по всей России 1-3 дня.'
-    }
-    
+        'delivery_info': '🚚 Доставка по всей России 1-3 дня.'}
+
     @staticmethod
     def get_all() -> Dict[str, str]:
         with db.cursor() as c:
@@ -1027,11 +1027,11 @@ class SettingsModel:
                 with db.cursor() as c2:
                     c2.execute("INSERT OR IGNORE INTO bot_settings (key, value) VALUES (?, ?)", (k, v))
         return settings
-    
+
     @staticmethod
     def get(key: str) -> str:
         return SettingsModel.get_all().get(key, '')
-    
+
     @staticmethod
     def set(key: str, value: str) -> bool:
         with db.cursor() as c:

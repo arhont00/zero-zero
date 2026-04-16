@@ -54,7 +54,7 @@ def seed_products():
         c.execute("SELECT COUNT(*) as cnt FROM bracelets WHERE name LIKE '%Защита%'")
         if c.fetchone()['cnt'] > 0:
             return
-        
+
         # Категории
         categories = [
             (1, "Браслеты", "💎", "Готовые браслеты из натуральных камней"),
@@ -64,7 +64,7 @@ def seed_products():
         for cat_id, name, emoji, desc in categories:
             c.execute("INSERT OR IGNORE INTO categories (id, name, emoji, description) VALUES (?, ?, ?, ?)",
                       (cat_id, name, emoji, desc))
-        
+
         # Товары
         products = [
             ("Готовый браслет «Защита»", 2500, 1, "Браслет из шунгита, чёрного турмалина и обсидиана. Создаёт мощный защитный экран от негативных энергий, помогает сохранять внутреннюю устойчивость и спокойствие в любых ситуациях.", ""),
@@ -78,9 +78,15 @@ def seed_products():
             ("Свеча «Здоровье»", 1800, 3, "Программная свеча, заряженная на укрепление здоровья и восстановление сил. Натуральные масла и камни способствуют гармонизации физического и энергетического тела.", ""),
         ]
         for name, price, cat_id, desc, image in products:
-            c.execute("INSERT INTO bracelets (name, description, price, image_url, category_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                      (name, desc, price, image, cat_id, datetime.now()))
-        
+            c.execute(
+                "INSERT INTO bracelets (name, description, price, image_url, category_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (name,
+                 desc,
+                 price,
+                 image,
+                 cat_id,
+                 datetime.now()))
+
         workouts = [
             ("Йога с камнями — базовый комплекс", 30, "intermediate",
              "Классические асаны с камнями для усиления практики.\n\n"
@@ -115,8 +121,6 @@ def seed_products():
             c.execute("""INSERT INTO workouts (name, duration, difficulty, description)
                          VALUES (?, ?, ?, ?)""",
                       (name, duration, difficulty, description))
-
-
 
 
 def sync_knowledge_from_files():
@@ -159,11 +163,8 @@ def sync_knowledge_from_files():
             ))
 
 
-
 def run_all_content_seeds():
     """Запускает все сиды контента."""
     seed_faq()
-    seed_workouts()
     seed_products()
     sync_knowledge_from_files()
-

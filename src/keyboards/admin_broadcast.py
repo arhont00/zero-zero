@@ -3,6 +3,7 @@
 """
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+
 def get_broadcast_main_keyboard() -> InlineKeyboardMarkup:
     """Главное меню рассылок."""
     buttons = [

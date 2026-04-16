@@ -66,10 +66,10 @@ async def _show_page(callback: CallbackQuery, page: int):
 
     nav = []
     if page > 1:
-        nav.append(InlineKeyboardButton(text="◀️", callback_data=f"knowledge_page_{page-1}"))
+        nav.append(InlineKeyboardButton(text="◀️", callback_data=f"knowledge_page_{page - 1}"))
     nav.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="noop"))
     if page < total_pages:
-        nav.append(InlineKeyboardButton(text="▶️", callback_data=f"knowledge_page_{page+1}"))
+        nav.append(InlineKeyboardButton(text="▶️", callback_data=f"knowledge_page_{page + 1}"))
     if nav:
         buttons.append(nav)
 

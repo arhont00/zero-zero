@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import List, Dict
 
+
 def get_promos_main_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(text="📋 СПИСОК ПРОМОКОДОВ", callback_data="admin_promos_list")],

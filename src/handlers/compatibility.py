@@ -8,8 +8,6 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-from src.utils.text_loader import ContentLoader
-
 logger = logging.getLogger(__name__)
 router = Router()
 
@@ -236,7 +234,6 @@ async def compat_start(callback: CallbackQuery, state: FSMContext):
     )
 
 
-
 @router.callback_query(CompatibilityStates.choosing_first, F.data.startswith("compat1_"))
 async def compat_first_chosen(callback: CallbackQuery, state: FSMContext):
     """Первый камень выбран — выбираем второй."""
@@ -266,7 +263,6 @@ async def compat_first_chosen(callback: CallbackQuery, state: FSMContext):
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
     )
-
 
 
 @router.callback_query(CompatibilityStates.choosing_second, F.data.startswith("compat2_"))
@@ -316,4 +312,3 @@ async def compat_result(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text="← МЕНЮ", callback_data="menu")],
         ])
     )
-

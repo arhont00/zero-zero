@@ -9,7 +9,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 from src.database.db import db
 from src.database.models import (
-    CategoryModel, ItemInfo, CartModel, OrderModel,
+    CategoryModel, ItemInfo, CartModel,
     PromoModel, UserModel
 )
 from src.keyboards.shop import (
@@ -18,8 +18,6 @@ from src.keyboards.shop import (
 )
 from src.utils.helpers import format_price
 from src.services.analytics import FunnelTracker
-from src.services.notifications import AdminNotifier
-from src.config import Config
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -208,8 +206,6 @@ async def checkout_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-
-
 @router.callback_query(F.data == "enter_promo")
 async def enter_promo(callback: CallbackQuery, state: FSMContext):
     """Ввод промокода."""
@@ -219,6 +215,7 @@ async def enter_promo(callback: CallbackQuery, state: FSMContext):
         "🎫 *ВВЕДИТЕ ПРОМОКОД*\n\nОтправьте код в ответ на это сообщение:",
         parse_mode="Markdown"
     )
+
 
 @router.message(OrderStates.waiting_promo)
 async def process_promo(message: Message, state: FSMContext):
@@ -255,7 +252,6 @@ async def show_payment_methods(message: Message, state: FSMContext):
 
     total, _ = CartModel.get_total(user_id)
     final_total = max(0, total - discount)
-
 
     bonus_balance = UserModel.get_bonus_balance(user_id)
 

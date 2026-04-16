@@ -10,7 +10,6 @@ from datetime import datetime
 
 from src.database.db import db
 from src.database.models import UserModel
-from src.utils.helpers import format_price
 
 logger = logging.getLogger(__name__)
 router = Router()

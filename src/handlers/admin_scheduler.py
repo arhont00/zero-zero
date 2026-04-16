@@ -9,7 +9,7 @@ from aiogram.fsm.state import State, StatesGroup
 from datetime import datetime
 
 from src.database.db import db
-from src.database.models import UserModel, ScheduledPostModel
+from src.database.models import UserModel
 from src.utils.text_loader import ContentLoader
 from src.config import Config
 
@@ -29,15 +29,15 @@ async def admin_scheduler(callback: CallbackQuery):
     if not UserModel.is_admin(callback.from_user.id):
         await callback.answer("❌ Нет прав")
         return
-    
+
     posts = ContentLoader.list_posts()
-    
+
     with db.cursor() as c:
         c.execute("SELECT COUNT(*) as cnt FROM scheduled_posts WHERE status = 'pending'")
         pending = c.fetchone()['cnt']
         c.execute("SELECT COUNT(*) as cnt FROM scheduled_posts WHERE status = 'published'")
         published = c.fetchone()['cnt']
-    
+
     text = (
         f"📅 *ПЛАНИРОВЩИК ПОСТОВ*\n\n"
         f"📁 *Доступно постов:* {len(posts)}\n"
@@ -45,13 +45,13 @@ async def admin_scheduler(callback: CallbackQuery):
         f"✅ *Опубликовано:* {published}\n\n"
         f"Выберите действие:"
     )
-    
+
     buttons = [
         [InlineKeyboardButton(text="➕ ДОБАВИТЬ ПОСТ", callback_data="scheduler_add")],
         [InlineKeyboardButton(text="📋 СПИСАК ЗАПЛАНИРОВАННЫХ", callback_data="scheduler_list")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_menu")]
     ]
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -60,7 +60,7 @@ async def admin_scheduler(callback: CallbackQuery):
 async def scheduler_add(callback: CallbackQuery, state: FSMContext):
     """Добавление поста в расписание."""
     posts = ContentLoader.list_posts()
-    
+
     if not posts:
         await callback.message.edit_text(
             "❌ Нет доступных постов. Сначала добавьте файлы в папку content/posts/",
@@ -70,15 +70,15 @@ async def scheduler_add(callback: CallbackQuery, state: FSMContext):
         )
         await callback.answer()
         return
-    
+
     await state.set_state(SchedulerStates.selecting_post)
-    
+
     buttons = []
     for p in posts[:20]:
         buttons.append([InlineKeyboardButton(text=p, callback_data=f"scheduler_post_{p}")])
-    
+
     buttons.append([InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_scheduler")])
-    
+
     await callback.message.edit_text(
         "📝 Выберите пост для публикации:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -92,7 +92,7 @@ async def scheduler_post_selected(callback: CallbackQuery, state: FSMContext):
     post_id = callback.data.replace("scheduler_post_", "")
     await state.update_data(post_id=post_id)
     await state.set_state(SchedulerStates.entering_datetime)
-    
+
     await callback.message.edit_text(
         "📅 Введите дату и время публикации в формате:\n"
         "`2026-03-10 15:30`\n\n"
@@ -116,12 +116,12 @@ async def scheduler_datetime(message: Message, state: FSMContext):
         except ValueError:
             await message.answer("❌ Неверный формат. Используйте ГГГГ-ММ-ДД ЧЧ:ММ")
             return
-    
+
     await state.update_data(scheduled_time=dt)
     await state.set_state(SchedulerStates.confirming)
-    
+
     data = await state.get_data()
-    
+
     await message.answer(
         f"✅ *Подтвердите:*\n"
         f"Пост: `{data['post_id']}`\n"
@@ -140,13 +140,13 @@ async def scheduler_confirm(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     post_id = data['post_id']
     scheduled_time = data['scheduled_time']
-    
+
     with db.cursor() as c:
         c.execute("""
             INSERT INTO scheduled_posts (post_id, channel_id, scheduled_time, created_at)
             VALUES (?, ?, ?, ?)
         """, (post_id, Config.CHANNEL_ID, scheduled_time, datetime.now()))
-    
+
     await state.clear()
     await callback.message.edit_text(
         f"✅ Пост `{post_id}` запланирован на {scheduled_time}",
@@ -169,35 +169,35 @@ async def scheduler_list(callback: CallbackQuery):
     """Список запланированных постов."""
     with db.cursor() as c:
         c.execute("""
-            SELECT * FROM scheduled_posts 
-            WHERE status = 'pending' 
+            SELECT * FROM scheduled_posts
+            WHERE status = 'pending'
             ORDER BY scheduled_time
         """)
         pending = [dict(row) for row in c.fetchall()]
-        
+
         c.execute("""
-            SELECT * FROM scheduled_posts 
-            WHERE status = 'published' 
+            SELECT * FROM scheduled_posts
+            WHERE status = 'published'
             ORDER BY scheduled_time DESC
             LIMIT 10
         """)
         published = [dict(row) for row in c.fetchall()]
-    
+
     text = "📅 *ЗАПЛАНИРОВАННЫЕ ПОСТЫ*\n\n"
-    
+
     if pending:
         for p in pending:
             text += f"• {p['post_id']} — {p['scheduled_time'][:16]}\n"
     else:
         text += "Нет запланированных постов.\n\n"
-    
+
     text += "\n✅ *Последние опубликованные:*\n"
     if published:
         for p in published:
             text += f"• {p['post_id']} — {p['published_at'][:16] if p['published_at'] else p['scheduled_time'][:16]}\n"
     else:
         text += "Нет опубликованных постов."
-    
+
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[

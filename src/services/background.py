@@ -3,11 +3,9 @@
 """
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from src.database.db import db
-from src.database.models import OrderModel
-from src.services.notifications import AdminNotifier
 from src.config import Config
 
 logger = logging.getLogger(__name__)
@@ -18,7 +16,7 @@ async def check_pending_orders():
     while True:
         try:
             await asyncio.sleep(3600)  # каждый час
-            
+
             with db.cursor() as c:
                 c.execute("""
                     SELECT id, user_id FROM orders
@@ -26,11 +24,11 @@ async def check_pending_orders():
                     AND created_at < datetime('now', '-24 hours')
                 """)
                 old_orders = c.fetchall()
-                
+
                 for order in old_orders:
                     c.execute("UPDATE orders SET status = 'cancelled' WHERE id = ?", (order['id'],))
                     logger.info(f"Заказ #{order['id']} отменён (не оплачен 24ч)")
-                    
+
         except Exception as e:
             logger.error(f"Ошибка в check_pending_orders: {e}")
 
@@ -40,7 +38,7 @@ async def check_birthdays():
     while True:
         try:
             await asyncio.sleep(3600)
-            
+
             today = datetime.now().strftime('%m-%d')
             with db.cursor() as c:
                 c.execute("""
@@ -49,7 +47,7 @@ async def check_birthdays():
                     AND strftime('%m-%d', birthday) = ?
                 """, (today,))
                 birthday_users = c.fetchall()
-                
+
                 for user in birthday_users:
                     c.execute("""
                         SELECT 1 FROM birthday_promos
@@ -57,21 +55,21 @@ async def check_birthdays():
                     """, (user['user_id'],))
                     if c.fetchone():
                         continue
-                    
+
                     promo_code = f"BDAY{user['user_id']}{datetime.now().strftime('%d%m')}"
-                    
+
                     c.execute("""
                         INSERT INTO promocodes (code, discount_pct, max_uses, created_at)
                         VALUES (?, 15, 1, ?)
                     """, (promo_code, datetime.now()))
-                    
+
                     c.execute("""
                         INSERT INTO birthday_promos (user_id, promo_code, date)
                         VALUES (?, ?, date('now'))
                     """, (user['user_id'], promo_code))
-                    
+
                     logger.info(f"Создан birthday-промокод {promo_code} для {user['user_id']}")
-                    
+
         except Exception as e:
             logger.error(f"Ошибка в check_birthdays: {e}")
 
@@ -80,7 +78,7 @@ async def send_daily_stone(bot):
     """Рассылка камня дня в 9:00 каждый день."""
     while True:
         try:
-            from datetime import datetime, time
+            from datetime import datetime
             now = datetime.now()
             # Вычисляем сколько ждать до следующего 9:00
             target = now.replace(hour=9, minute=0, second=0, microsecond=0)
@@ -191,7 +189,6 @@ async def check_reactivation(bot):
                 inactive = c.fetchall()
 
             if inactive:
-                from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
                 text = f"😴 *НЕАКТИВНЫЕ ПОЛЬЗОВАТЕЛИ ({len(inactive)}):*\n\n"
                 for row in inactive[:10]:
                     name = row['first_name'] or row['username'] or str(row['user_id'])
@@ -212,8 +209,6 @@ async def check_reactivation(bot):
         except Exception as e:
             logger.error(f"Ошибка check_reactivation: {e}")
             await asyncio.sleep(6 * 3600)
-
-
 
 
 async def send_review_requests(bot):
@@ -295,7 +290,8 @@ async def send_birthday_promos(bot):
 
             for user in birthday_users:
                 try:
-                    import random, string
+                    import random
+                    import string
                     promo = f"BDAY{''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}"
                     with db.cursor() as c:
                         c.execute("""INSERT OR IGNORE INTO promocodes

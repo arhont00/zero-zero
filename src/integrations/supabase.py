@@ -20,7 +20,7 @@ SUPABASE_TABLE_QUIZ_LEADS = "quiz_leads"
 
 class SupabaseClient:
     """Упрощённый клиент для работы с Supabase REST API."""
-    
+
     def __init__(self, url: str = SUPABASE_URL, key: str = SUPABASE_KEY):
         self.url = url.rstrip('/')
         self.key = key
@@ -29,7 +29,7 @@ class SupabaseClient:
             "Content-Type": "application/json",
             "apikey": key,
         }
-    
+
     async def insert_email(self, email: str, source: str = "pop-up") -> bool:
         """Сохранить email подписку."""
         try:
@@ -53,7 +53,7 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"❌ Ошибка при сохранении email: {e}")
             return False
-    
+
     async def insert_chat_message(self, user_id: str, message: str, email: Optional[str] = None) -> bool:
         """Сохранить сообщение из чата."""
         try:
@@ -77,8 +77,12 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"❌ Chat error: {e}")
             return False
-    
-    async def insert_quiz_lead(self, email: str, name: Optional[str] = None, quiz_result: Optional[dict] = None) -> bool:
+
+    async def insert_quiz_lead(
+            self,
+            email: str,
+            name: Optional[str] = None,
+            quiz_result: Optional[dict] = None) -> bool:
         """Сохранить результат квиза."""
         try:
             import httpx
@@ -111,41 +115,41 @@ supabase = SupabaseClient()
 
 async def setup_supabase_routes(app):
     """Регистрация Supabase routes в FastAPI/Quart приложении."""
-    
+
     @app.post("/api/subscribe-email")
     async def subscribe_email(data: dict):
         """POST endpoint для подписки на email."""
         email = data.get("email", "").strip()
         source = data.get("source", "pop-up")
-        
+
         if not email or "@" not in email:
             return {"success": False, "error": "Invalid email"}
-        
+
         success = await supabase.insert_email(email, source)
         return {"success": success}
-    
+
     @app.post("/api/chat-message")
     async def chat_message(data: dict):
         """POST endpoint для чат-сообщений."""
         user_id = data.get("user_id", f"guest_{datetime.now().timestamp()}")
         message = data.get("message", "").strip()
         email = data.get("email", "").strip() or None
-        
+
         if not message:
             return {"success": False, "error": "Message is empty"}
-        
+
         success = await supabase.insert_chat_message(user_id, message, email)
         return {"success": success}
-    
+
     @app.post("/api/quiz-result")
     async def quiz_result(data: dict):
         """POST endpoint для сохранения результата квиза."""
         email = data.get("email", "").strip()
         name = data.get("name", "").strip() or None
         quiz_result = data.get("result")
-        
+
         if not email or "@" not in email:
             return {"success": False, "error": "Invalid email"}
-        
+
         success = await supabase.insert_quiz_lead(email, name, quiz_result)
         return {"success": success}

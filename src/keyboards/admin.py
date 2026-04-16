@@ -3,6 +3,7 @@
 """
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+
 def get_admin_main_keyboard() -> InlineKeyboardMarkup:
     """Главная клавиатура админки."""
     buttons = [

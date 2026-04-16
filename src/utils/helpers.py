@@ -1,7 +1,6 @@
 """
 Вспомогательные функции.
 """
-import re
 import json
 from typing import List, Optional
 from datetime import datetime

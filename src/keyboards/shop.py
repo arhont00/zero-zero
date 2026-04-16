@@ -39,7 +39,7 @@ def get_products_keyboard(products: List[Dict]) -> InlineKeyboardMarkup:
 def get_product_keyboard(product_id: int, purchasable: bool, in_cart: bool = False) -> InlineKeyboardMarkup:
     """Клавиатура для страницы товара."""
     buttons = []
-    
+
     if purchasable:
         if in_cart:
             buttons.append([
@@ -50,49 +50,49 @@ def get_product_keyboard(product_id: int, purchasable: bool, in_cart: bool = Fal
             buttons.append([
                 InlineKeyboardButton(text="➕ ДОБАВИТЬ В КОРЗИНУ", callback_data=f"add_to_cart_{product_id}")
             ])
-    
+
     buttons.append([
         InlineKeyboardButton(text="← НАЗАД", callback_data="showcase"),
         InlineKeyboardButton(text="❤️ В ИЗБРАННОЕ", callback_data=f"wishlist_add_{product_id}")
     ])
-    
+
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def get_cart_keyboard(total: float) -> InlineKeyboardMarkup:
     """Клавиатура для корзины."""
     buttons = []
-    
+
     if total > 0:
         buttons.append([InlineKeyboardButton(text="✅ ОФОРМИТЬ ЗАКАЗ", callback_data="checkout")])
-    
+
     buttons.append([InlineKeyboardButton(text="🗑 ОЧИСТИТЬ КОРЗИНУ", callback_data="cart_clear")])
     buttons.append([InlineKeyboardButton(text="← ПРОДОЛЖИТЬ ПОКУПКИ", callback_data="showcase")])
-    
+
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def get_payment_keyboard(amount: float, bonus_balance: float = 0) -> InlineKeyboardMarkup:
     """Клавиатура выбора оплаты."""
     buttons = []
-    
+
     if amount > 0:
         stars_amount = max(1, int(amount))
         buttons.append([
             InlineKeyboardButton(text=f"⭐ Оплатить Stars ({stars_amount} ⭐)", callback_data="pay_stars")
         ])
-        
+
         if bonus_balance >= amount:
             buttons.append([
                 InlineKeyboardButton(text="💰 Оплатить бонусами", callback_data="pay_bonus")
             ])
         elif bonus_balance > 0:
             buttons.append([
-                InlineKeyboardButton(text=f"💰 Частично бонусами ({format_price(bonus_balance)})", 
+                InlineKeyboardButton(text=f"💰 Частично бонусами ({format_price(bonus_balance)})",
                                      callback_data="pay_partial_bonus")
             ])
-    
+
     buttons.append([InlineKeyboardButton(text="📞 Связаться с мастером", callback_data="contact_master")])
     buttons.append([InlineKeyboardButton(text="← НАЗАД", callback_data="cart")])
-    
+
     return InlineKeyboardMarkup(inline_keyboard=buttons)

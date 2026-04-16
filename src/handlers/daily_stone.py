@@ -3,7 +3,6 @@
 Запускается из фоновой задачи в background.py
 """
 import logging
-import random
 from aiogram import Router, F, Bot
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 

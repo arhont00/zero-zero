@@ -12,11 +12,11 @@ load_dotenv(ENV_FILE)
 
 class Config:
     """Конфигурация приложения с валидацией."""
-    
+
     # Обязательные параметры
     BOT_TOKEN = os.getenv('BOT_TOKEN', '')
     ADMIN_ID = None
-    
+
     try:
         _admin_id = os.getenv('ADMIN_ID', '0')
         ADMIN_ID = int(_admin_id) if _admin_id and _admin_id != '0' else 0
@@ -50,7 +50,7 @@ class Config:
     AMOCRM_ACCESS_TOKEN = os.getenv('AMOCRM_ACCESS_TOKEN', '')
     CHANNEL_ID = os.getenv('CHANNEL_ID', '')
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-    
+
     try:
         AI_DAILY_LIMIT = int(os.getenv('AI_DAILY_LIMIT', '3'))
     except (ValueError, TypeError):
@@ -61,7 +61,7 @@ class Config:
         """Проверить конфигурацию."""
         if not cls.BOT_TOKEN:
             raise ValueError("❌ BOT_TOKEN не установлен в переменных окружения")
-        
+
         # Создаём необходимые директории
         dirs = [
             cls.DATA_DIR,
@@ -75,13 +75,13 @@ class Config:
             cls.CLUB_CONTENT_PATH,
             cls.DB_PATH.parent
         ]
-        
+
         for dir_path in dirs:
             try:
                 dir_path.mkdir(parents=True, exist_ok=True)
             except Exception as e:
                 raise ValueError(f"Не удалось создать директорию {dir_path}: {e}")
-        
+
         return True
 
     @classmethod

@@ -73,21 +73,21 @@ class AdminStates(StatesGroup):
     # Общие
     waiting_text = State()
     waiting_confirm = State()
-    
+
     # Категории
     category_create_name = State()
     category_create_emoji = State()
     category_create_desc = State()
     category_edit = State()
     category_edit_field = State()
-    
+
     # Браслеты
     bracelet_create_name = State()
     bracelet_create_price = State()
     bracelet_create_category = State()
     bracelet_create_desc = State()
     bracelet_create_photo = State()
-    
+
     # Промокоды
     promo_create_type = State()
     promo_create_discount = State()
@@ -97,11 +97,11 @@ class AdminStates(StatesGroup):
     promo_create_code = State()
     promo_edit_field = State()
     promo_edit_value = State()
-    
+
     # Расписание
     schedule_add_date = State()
     schedule_add_time = State()
-    
+
     # Рассылки
     broadcast_text = State()
     broadcast_buttons = State()
@@ -109,15 +109,15 @@ class AdminStates(StatesGroup):
     broadcast_button_url = State()
     broadcast_audience = State()
     broadcast_confirm = State()
-    
+
     # Диагностика (админ)
     diag_result = State()
     diag_service = State()
-    
+
     # Клуб
     club_edit_info = State()
     club_extend_days = State()
-    
+
     # Настройки
     settings_edit = State()
     settings_value = State()

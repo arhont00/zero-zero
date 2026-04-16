@@ -77,7 +77,6 @@ async def selector_start(callback: CallbackQuery):
     )
 
 
-
 @router.callback_query(F.data.startswith("sel_") & ~F.data.startswith("sel_stone_"))
 async def selector_result(callback: CallbackQuery):
     """Результат подборщика — список камней."""
@@ -114,4 +113,3 @@ async def selector_result(callback: CallbackQuery):
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
     )
-

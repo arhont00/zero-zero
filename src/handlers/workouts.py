@@ -16,7 +16,7 @@ router = Router()
 async def workouts_list(callback: CallbackQuery):
     """Список тренировок."""
     workouts = WorkoutModel.get_all()
-    
+
     if not workouts:
         await callback.message.edit_text(
             "🧘 *ПРАКТИКИ С КАМНЯМИ*\n\n"
@@ -27,9 +27,9 @@ async def workouts_list(callback: CallbackQuery):
         )
         await callback.answer()
         return
-    
+
     text = "🧘 *ПРАКТИКИ С КАМНЯМИ*\n\n"
-    
+
     buttons = []
     for w in workouts:
         difficulty_emoji = {
@@ -37,15 +37,15 @@ async def workouts_list(callback: CallbackQuery):
             'intermediate': '⭐',
             'advanced': '🔥'
         }.get(w['difficulty'], '•')
-        
+
         text += f"{difficulty_emoji} *{w['name']}* — {w['duration']} мин\n"
         buttons.append([InlineKeyboardButton(
             text=f"{w['name']} ({w['duration']} мин)",
             callback_data=f"workout_{w['id']}"
         )])
-    
+
     buttons.append([InlineKeyboardButton(text="← НАЗАД", callback_data="menu")])
-    
+
     await callback.message.edit_text(
         text,
         parse_mode="Markdown",
@@ -58,28 +58,28 @@ async def workouts_list(callback: CallbackQuery):
 async def workout_detail(callback: CallbackQuery):
     """Детальная информация о тренировке."""
     workout_id = int(callback.data.replace("workout_", ""))
-    
+
     with db.cursor() as c:
         c.execute("SELECT * FROM workouts WHERE id = ?", (workout_id,))
         workout = c.fetchone()
-    
+
     if not workout:
         await callback.answer("❌ Тренировка не найдена", show_alert=True)
         return
-    
+
     difficulty_emoji = {
         'beginner': '🌱',
         'intermediate': '⭐',
         'advanced': '🔥'
     }.get(workout['difficulty'], '•')
-    
+
     text = (
         f"{difficulty_emoji} *{workout['name']}*\n\n"
         f"⏱️ *Длительность:* {workout['duration']} мин\n"
         f"📊 *Уровень:* {workout['difficulty']}\n\n"
         f"📝 *Описание:*\n{workout['description']}"
     )
-    
+
     await callback.message.edit_text(
         text,
         parse_mode="Markdown",

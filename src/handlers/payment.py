@@ -76,7 +76,6 @@ async def pay_stars(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_id = callback.from_user.id
     final_total = data.get('final_total', 0)
     promo_code = data.get('promo_code')
-    discount = data.get('discount_total', 0)
 
     if not final_total or final_total <= 0:
         await callback.answer("❌ Ошибка суммы заказа", show_alert=True)
@@ -134,7 +133,6 @@ async def pay_bonus(callback: CallbackQuery, state: FSMContext):
         return
 
     promo_code = data.get('promo_code')
-    discount = data.get('discount_total', 0)
 
     order_id = OrderModel.create(
         user_id=user_id,
@@ -192,7 +190,6 @@ async def pay_partial_bonus(callback: CallbackQuery, state: FSMContext, bot: Bot
         return
 
     promo_code = data.get('promo_code')
-    discount = data.get('discount_total', 0)
 
     order_id = OrderModel.create(
         user_id=user_id,
@@ -364,7 +361,6 @@ async def _process_gift_payment(message: Message, payload: str, payment, bot: Bo
         parse_mode="Markdown",
         reply_markup=get_main_keyboard()
     )
-
 
 
 async def _process_marathon_payment(user_id: int, payment, bot: Bot):

@@ -1,5 +1,6 @@
 from src.database.db import db
 
+
 def init_db():
     """Создаёт все таблицы, если их нет."""
     with db.connection() as conn:
@@ -194,9 +195,6 @@ def init_db():
             forms TEXT,
             notes TEXT
         )''')
-
-
-
         # Истории
         c.execute('''CREATE TABLE IF NOT EXISTS stories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -309,16 +307,11 @@ def init_db():
             status TEXT DEFAULT 'paid',
             created_at TIMESTAMP
         )''')
-
-
-
         # Подписка на новинки витрины
         c.execute('''CREATE TABLE IF NOT EXISTS new_item_subscribers (
             user_id INTEGER PRIMARY KEY,
             subscribed_at TIMESTAMP
         )''')
-
-
         # Запросы отзывов после заказа
         c.execute('''CREATE TABLE IF NOT EXISTS review_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

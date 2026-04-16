@@ -2,7 +2,7 @@
 Inline-клавиатуры для бота.
 """
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 from src.utils.helpers import format_price
 

@@ -23,7 +23,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
     user_id = message.from_user.id
     username = message.from_user.username or ""
     first_name = message.from_user.first_name or ""
-    
+
     # Парсим реферальный код
     ref_id = None
     if message.text and len(message.text.split()) > 1:
@@ -35,11 +35,11 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
                     ref_id = None
         except Exception:
             ref_id = None
-    
+
     # Регистрируем пользователя
     is_new = not UserModel.get(user_id)
     UserModel.create_or_update(user_id, username, first_name, ref_id)
-    
+
     # Начисляем бонусы за реферала
     if is_new and ref_id:
         from src.database.models import ReferralModel
@@ -54,15 +54,15 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         except Exception as e:
             logger.debug("Не удалось уведомить реферера %s: %s", ref_id, e)
             pass
-    
+
     # Отслеживаем в воронке
     await FunnelTracker.track(user_id, 'start')
     await state.clear()
-    
+
     # Отправляем приветствие
     settings = SettingsModel.get_all()
     welcome_text = settings.get('welcome_text', '🌟 ДОБРО ПОЖАЛОВАТЬ!')
-    
+
     await message.answer(welcome_text, reply_markup=get_main_keyboard())
 
 
@@ -72,7 +72,7 @@ async def cmd_admin(message: Message):
     if not UserModel.is_admin(message.from_user.id):
         await message.answer("❌ У вас нет прав администратора")
         return
-    
+
     from src.keyboards.admin import get_admin_main_keyboard
     await message.answer(
         "⚙️ *АДМИН-ПАНЕЛЬ*",
@@ -114,11 +114,11 @@ async def contact_message_received(message: Message, state: FSMContext, bot: Bot
     current_state = await state.get_state()
     if current_state != "waiting_contact_message":
         return
-    
+
     user_id = message.from_user.id
     user = UserModel.get(user_id)
     name = user['first_name'] or user['username'] or str(user_id)
-    
+
     await bot.send_message(
         Config.ADMIN_ID,
         f"📞 *СООБЩЕНИЕ ОТ ПОЛЬЗОВАТЕЛЯ*\n\n"
@@ -139,18 +139,18 @@ async def referral_info(callback: CallbackQuery):
     user_id = callback.from_user.id
     bot_username = (await callback.bot.get_me()).username
     ref_link = f"https://t.me/{bot_username}?start=ref{user_id}"
-    
+
     with db.cursor() as c:
         c.execute("SELECT balance, total_earned, referral_count FROM referral_balance WHERE user_id = ?", (user_id,))
         row = c.fetchone()
-    
+
     if row:
         balance = row['balance']
         total_earned = row['total_earned']
         referral_count = row['referral_count']
     else:
         balance = total_earned = referral_count = 0
-    
+
     text = (
         "🤝 *РЕФЕРАЛЬНАЯ ПРОГРАММА*\n\n"
         f"💰 *Ваш баланс:* {balance} бонусов\n"
@@ -159,7 +159,7 @@ async def referral_info(callback: CallbackQuery):
         f"🔗 *Ваша реферальная ссылка:*\n`{ref_link}`\n\n"
         "За каждого приглашённого друга вы получаете 100 бонусов!"
     )
-    
+
     await callback.message.edit_text(
         text,
         parse_mode="Markdown",

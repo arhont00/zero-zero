@@ -3,10 +3,9 @@
 """
 import logging
 from aiogram import Router, F, Bot
-from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from datetime import datetime
 
 from src.database.db import db
 from src.database.models import UserModel, OrderModel
@@ -38,13 +37,13 @@ async def admin_orders(callback: CallbackQuery):
     if not UserModel.is_admin(callback.from_user.id):
         await callback.answer("❌ Нет прав")
         return
-    
+
     stats = OrderModel.get_stats_by_status()
-    
+
     text = "📦 *УПРАВЛЕНИЕ ЗАКАЗАМИ*\n\n📊 *Статусы:*\n"
     for status, count in stats.items():
         text += f"{STATUSES.get(status, status)}: {count}\n"
-    
+
     buttons = [
         [InlineKeyboardButton(text="📋 ВСЕ ЗАКАЗЫ", callback_data="orders_list_all")],
         [InlineKeyboardButton(text="⏳ ОЖИДАЮТ ОПЛАТЫ", callback_data="orders_status_pending")],
@@ -55,7 +54,7 @@ async def admin_orders(callback: CallbackQuery):
         [InlineKeyboardButton(text="❌ ОТМЕНЕНЫ", callback_data="orders_status_cancelled")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_menu")]
     ]
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -87,10 +86,10 @@ async def show_orders_list(callback: CallbackQuery, orders: list, title: str, st
         )
         await callback.answer()
         return
-    
+
     text = f"📦 *{title}*\n\n"
     buttons = []
-    
+
     for o in orders:
         status_emoji = {
             'pending': '⏳',
@@ -100,19 +99,19 @@ async def show_orders_list(callback: CallbackQuery, orders: list, title: str, st
             'delivered': '📦',
             'cancelled': '❌'
         }.get(o['status'], '📦')
-        
+
         date = o['created_at'][:10] if o['created_at'] else ''
         name = o['first_name'] or f"ID{o['user_id']}"
-        
+
         text += f"{status_emoji} #{o['id']} | {name} | {format_price(o['total_price'])} | {date}\n"
         buttons.append([InlineKeyboardButton(
             text=f"📋 Заказ #{o['id']}",
             callback_data=f"order_view_{o['id']}"
         )])
-    
+
     back_data = f"orders_status_{status_filter}" if status_filter else "admin_orders"
     buttons.append([InlineKeyboardButton(text="🔙 НАЗАД", callback_data=back_data)])
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -122,13 +121,13 @@ async def order_view(callback: CallbackQuery):
     """Просмотр деталей заказа."""
     order_id = int(callback.data.replace("order_view_", ""))
     order = OrderModel.get_by_id(order_id)
-    
+
     if not order:
         await callback.answer("❌ Заказ не найден")
         return
-    
+
     items = OrderModel.get_items(order_id)
-    
+
     text = (
         f"📦 *ЗАКАЗ #{order_id}*\n\n"
         f"👤 *Клиент:* {order['first_name'] or 'Не указано'} (@{order['username'] or 'нет'})\n"
@@ -140,16 +139,16 @@ async def order_view(callback: CallbackQuery):
         f"📊 *Статус:* {STATUSES.get(order['status'], order['status'])}\n\n"
         f"📦 *Товары:*\n"
     )
-    
+
     for item in items:
         text += f"  • {item['item_name']} x{item['quantity']} = {format_price(item['price'] * item['quantity'])}\n"
-    
+
     buttons = [
         [InlineKeyboardButton(text="✏️ ИЗМЕНИТЬ СТАТУС", callback_data=f"order_change_status_{order_id}")],
         [InlineKeyboardButton(text="✍️ НАПИСАТЬ КЛИЕНТУ", url=f"tg://user?id={order['user_id']}")],
         [InlineKeyboardButton(text="🔙 К СПИСКУ", callback_data="orders_list_all")]
     ]
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -159,13 +158,13 @@ async def order_change_status(callback: CallbackQuery, state: FSMContext):
     """Начать изменение статуса."""
     order_id = int(callback.data.replace("order_change_status_", ""))
     await state.update_data(order_id=order_id)
-    
+
     buttons = []
     for status, label in STATUSES.items():
         buttons.append([InlineKeyboardButton(text=label, callback_data=f"order_set_status_{order_id}_{status}")])
-    
+
     buttons.append([InlineKeyboardButton(text="🔙 НАЗАД", callback_data=f"order_view_{order_id}")])
-    
+
     await callback.message.edit_text(
         f"✏️ *ИЗМЕНЕНИЕ СТАТУСА ЗАКАЗА #{order_id}*\n\nВыберите новый статус:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -179,23 +178,23 @@ async def order_set_status(callback: CallbackQuery, state: FSMContext, bot: Bot)
     parts = callback.data.split("_")
     order_id = int(parts[3])
     new_status = parts[4]
-    
+
     order = OrderModel.get_by_id(order_id)
     if not order:
         await callback.answer("❌ Заказ не найден")
         return
-    
+
     # Обновляем статус
     with db.cursor() as c:
         c.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
-    
+
     # Отправляем уведомление клиенту
     status_text = STATUSES.get(new_status, new_status)
     await bot.send_message(
         order['user_id'],
         f"📦 *СТАТУС ЗАКАЗА #{order_id} ИЗМЕНЁН*\n\nНовый статус: {status_text}\n\nСпасибо, что выбрали нас!"
     )
-    
+
     await state.clear()
     await callback.message.edit_text(
         f"✅ *Статус заказа #{order_id} изменён на {status_text}*",

@@ -2,7 +2,6 @@
 Админ-панель: управление камнями в базе знаний.
 """
 import logging
-import os
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
@@ -266,7 +265,7 @@ async def stone_edit_value_received(message: Message, state: FSMContext):
 
     await state.clear()
     await message.answer(
-        f"✅ *Поле обновлено!*",
+        "✅ *Поле обновлено!*",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="👁 ПРОСМОТР КАМНЯ", callback_data=f"admin_stone_view_{stone_id}")],

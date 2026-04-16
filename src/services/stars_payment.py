@@ -12,18 +12,19 @@ from src.database.db import db
 
 logger = logging.getLogger(__name__)
 
+
 class StarsPayment:
     """
     Обработка платежей через Telegram Stars.
     """
-    
+
     STARS_TO_RUB = 1.0  # 1 Star = 1 рубль (примерно)
-    
+
     @staticmethod
     def rub_to_stars(rub_amount: float) -> int:
         """Конвертировать рубли в Stars."""
         return max(1, int(rub_amount / StarsPayment.STARS_TO_RUB))
-    
+
     @staticmethod
     async def create_invoice(
         bot: Bot,
@@ -38,9 +39,9 @@ class StarsPayment:
         Создать счет на оплату Stars.
         """
         stars_amount = StarsPayment.rub_to_stars(amount_rub)
-        
+
         prices = [LabeledPrice(label=title, amount=stars_amount)]
-        
+
         try:
             await bot.send_invoice(
                 chat_id=user_id,
@@ -64,14 +65,14 @@ class StarsPayment:
         except Exception as e:
             logger.error(f"Ошибка создания счета Stars: {e}")
             return False
-    
+
     @staticmethod
     async def process_pre_checkout(pre_checkout: PreCheckoutQuery) -> bool:
         """
         Проверить данные перед оплатой.
         """
         return True
-    
+
     @staticmethod
     async def save_stars_order(
         user_id: int,
@@ -85,7 +86,7 @@ class StarsPayment:
         """
         with db.cursor() as c:
             c.execute("""
-                INSERT INTO stars_orders 
+                INSERT INTO stars_orders
                     (user_id, order_id, item_name, stars_amount, charge_id, status, created_at)
                 VALUES (?, ?, ?, ?, ?, 'paid', ?)
             """, (user_id, order_id, item_name, stars_amount, charge_id, datetime.now()))

@@ -6,7 +6,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from src.database.db import db
-from src.database.models import UserModel, OrderModel
+from src.database.models import UserModel
 
 logger = logging.getLogger(__name__)
 router = Router()

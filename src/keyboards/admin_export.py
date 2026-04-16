@@ -3,6 +3,7 @@
 """
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+
 def get_export_keyboard() -> InlineKeyboardMarkup:
     """Клавиатура экспорта."""
     buttons = [

@@ -27,21 +27,21 @@ async def admin_diagnostics(callback: CallbackQuery):
     if not UserModel.is_admin(callback.from_user.id):
         await callback.answer("❌ Нет прав")
         return
-    
+
     pending = DiagnosticModel.get_pending()
-    
+
     text = (
         f"🩺 *УПРАВЛЕНИЕ ДИАГНОСТИКОЙ*\n\n"
         f"📋 *Новых заявок:* {len(pending)}\n\n"
         f"Выберите действие:"
     )
-    
+
     buttons = [
         [InlineKeyboardButton(text="📋 НОВЫЕ ЗАЯВКИ", callback_data="admin_diag_pending")],
         [InlineKeyboardButton(text="📋 ВСЕ ЗАЯВКИ", callback_data="admin_diag_all")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_menu")]
     ]
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -50,7 +50,7 @@ async def admin_diagnostics(callback: CallbackQuery):
 async def admin_diag_pending(callback: CallbackQuery):
     """Список новых заявок."""
     pending = DiagnosticModel.get_pending()
-    
+
     if not pending:
         await callback.message.edit_text(
             "📭 Нет новых заявок.",
@@ -60,10 +60,10 @@ async def admin_diag_pending(callback: CallbackQuery):
         )
         await callback.answer()
         return
-    
+
     text = "📋 *НОВЫЕ ЗАЯВКИ НА ДИАГНОСТИКУ*\n\n"
     buttons = []
-    
+
     for d in pending:
         text += (
             f"───────────────\n"
@@ -73,9 +73,9 @@ async def admin_diag_pending(callback: CallbackQuery):
             f"📝 {d['notes'][:50]}...\n"
         )
         buttons.append([InlineKeyboardButton(text=f"👁️ Заявка #{d['id']}", callback_data=f"diag_view_{d['id']}")])
-    
+
     buttons.append([InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_diagnostics")])
-    
+
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -119,7 +119,7 @@ async def admin_diag_all(callback: CallbackQuery):
 async def admin_diag_view(callback: CallbackQuery, bot: Bot):
     """Просмотр деталей диагностики."""
     diag_id = int(callback.data.replace("diag_view_", ""))
-    
+
     with db.cursor() as c:
         c.execute("""
             SELECT d.*, u.first_name, u.username, u.user_id
@@ -128,11 +128,11 @@ async def admin_diag_view(callback: CallbackQuery, bot: Bot):
             WHERE d.id = ?
         """, (diag_id,))
         diag = c.fetchone()
-    
+
     if not diag:
         await callback.answer("❌ Диагностика не найдена")
         return
-    
+
     text = (
         f"🩺 *ДИАГНОСТИКА #{diag_id}*\n\n"
         f"👤 {diag['first_name']} (@{diag['username']})\n"
@@ -140,25 +140,25 @@ async def admin_diag_view(callback: CallbackQuery, bot: Bot):
         f"📅 {format_datetime(diag['created_at'])}\n\n"
         f"📝 *ЗАМЕТКИ КЛИЕНТА:*\n{diag['notes']}\n\n"
     )
-    
+
     if diag['admin_result']:
         text += f"📊 *РЕЗУЛЬТАТ:*\n{diag['admin_result']}\n"
-    
+
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📝 ВВЕСТИ РЕЗУЛЬТАТ", callback_data=f"diag_result_{diag_id}")],
         [InlineKeyboardButton(text="✨ НАЗНАЧИТЬ УСЛУГУ", callback_data=f"diag_service_{diag_id}")],
         [InlineKeyboardButton(text="✍️ НАПИСАТЬ КЛИЕНТУ", url=f"tg://user?id={diag['user_id']}")],
         [InlineKeyboardButton(text="🔙 К СПИСКУ", callback_data="admin_diag_pending")]
     ])
-    
+
     await callback.message.edit_text(text, reply_markup=kb)
-    
+
     # Отправляем фото отдельно
     if diag['photo1_file_id']:
         await bot.send_photo(callback.from_user.id, diag['photo1_file_id'], caption="📸 Фото 1")
     if diag['photo2_file_id']:
         await bot.send_photo(callback.from_user.id, diag['photo2_file_id'], caption="📸 Фото 2")
-    
+
     await callback.answer()
 
 
@@ -168,7 +168,7 @@ async def admin_diag_result(callback: CallbackQuery, state: FSMContext):
     diag_id = int(callback.data.replace("diag_result_", ""))
     await state.update_data(diag_id=diag_id)
     await state.set_state(AdminDiagnosticStates.waiting_result)
-    
+
     await callback.message.edit_text(
         f"📝 *ВВЕДИТЕ РЕЗУЛЬТАТ ДИАГНОСТИКИ #{diag_id}*\n\n"
         f"Опишите результаты и рекомендации.\n"
@@ -183,7 +183,7 @@ async def admin_diag_result_save(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
     diag_id = data['diag_id']
     result_text = message.text
-    
+
     with db.cursor() as c:
         c.execute("SELECT user_id FROM diagnostics WHERE id = ?", (diag_id,))
         row = c.fetchone()
@@ -192,11 +192,11 @@ async def admin_diag_result_save(message: Message, state: FSMContext, bot: Bot):
             await state.clear()
             return
         user_id = row['user_id']
-        
+
         c.execute("UPDATE diagnostics SET admin_result = ?, sent = 1 WHERE id = ?", (result_text, diag_id))
-    
+
     await state.clear()
-    
+
     # Отправляем клиенту
     await bot.send_message(
         user_id,
@@ -207,7 +207,7 @@ async def admin_diag_result_save(message: Message, state: FSMContext, bot: Bot):
             [InlineKeyboardButton(text="✨ УСЛУГИ", callback_data="services")]
         ])
     )
-    
+
     await message.answer("✅ Результат отправлен клиенту!")
 
 
@@ -216,18 +216,18 @@ async def admin_diag_service(callback: CallbackQuery, state: FSMContext):
     """Назначение услуги по результатам диагностики."""
     diag_id = int(callback.data.replace("diag_service_", ""))
     await state.update_data(diag_id=diag_id)
-    
+
     services = ServiceModel.get_all(active_only=True)
-    
+
     buttons = []
     for s in services:
         buttons.append([InlineKeyboardButton(
             text=f"{s['name']} — {s['price']}⭐",
             callback_data=f"diag_service_sel_{diag_id}_{s['id']}"
         )])
-    
+
     buttons.append([InlineKeyboardButton(text="🔙 НАЗАД", callback_data=f"diag_view_{diag_id}")])
-    
+
     await callback.message.edit_text(
         "✨ *ВЫБЕРИТЕ УСЛУГУ ДЛЯ РЕКОМЕНДАЦИИ*",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -241,19 +241,19 @@ async def admin_diag_service_sel(callback: CallbackQuery, state: FSMContext, bot
     parts = callback.data.split("_")
     diag_id = int(parts[3])
     service_id = int(parts[4])
-    
+
     with db.cursor() as c:
         c.execute("SELECT user_id FROM diagnostics WHERE id = ?", (diag_id,))
         diag = c.fetchone()
         c.execute("SELECT name, price FROM services WHERE id = ?", (service_id,))
         service = c.fetchone()
-    
+
     if not diag or not service:
         await callback.answer("❌ Ошибка")
         return
-    
+
     user_id = diag['user_id']
-    
+
     # Отправляем клиенту
     await bot.send_message(
         user_id,
@@ -267,9 +267,9 @@ async def admin_diag_service_sel(callback: CallbackQuery, state: FSMContext, bot
             [InlineKeyboardButton(text="✍️ НАПИСАТЬ МАСТЕРУ", callback_data="contact_master")]
         ])
     )
-    
+
     await callback.message.edit_text(
-        f"✅ Рекомендация услуги отправлена клиенту.",
+        "✅ Рекомендация услуги отправлена клиенту.",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔙 К ДИАГНОСТИКЕ", callback_data=f"diag_view_{diag_id}")]
         ])
@@ -307,18 +307,3 @@ async def admin_diag_contact(callback: CallbackQuery):
         parse_mode="Markdown"
     )
     await callback.answer()
-
-# ──────────────────────────────────────────────────────────────
-# КАСТОМНЫЙ ЗАКАЗ — ВЗЯТЬ В РАБОТУ (кнопка из уведомления мастеру)
-# ──────────────────────────────────────────────────────────────
-
-
-    await callback.answer(f"✅ Заказ #{order_id} взят в работу", show_alert=True)
-    await callback.message.edit_reply_markup(
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(
-                text=f"✅ Взят в работу #{order_id}",
-                callback_data="noop"
-            )]
-        ])
-    )

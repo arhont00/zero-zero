@@ -67,13 +67,20 @@ async def search_process(message: Message, state: FSMContext):
         notes = data.get('NOTES', '').lower()
 
         score = 0
-        if query in title: score += 10
-        if query in props: score += 6
-        if query in short: score += 4
-        if query in color: score += 3
-        if query in chakra: score += 3
-        if query in notes: score += 2
-        if query in full: score += 1
+        if query in title:
+            score += 10
+        if query in props:
+            score += 6
+        if query in short:
+            score += 4
+        if query in color:
+            score += 3
+        if query in chakra:
+            score += 3
+        if query in notes:
+            score += 2
+        if query in full:
+            score += 1
 
         if score > 0:
             results.append((score, stone_id, data))

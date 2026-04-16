@@ -14,18 +14,18 @@ logger = logging.getLogger(__name__)
 
 class Database:
     """Thread-safe работа с SQLite."""
-    
+
     _local = threading.local()
-    
+
     def __init__(self, db_path: str = str(Config.DB_PATH)):
         self.db_path = db_path
-    
+
     def get_connection(self) -> sqlite3.Connection:
         """Получить соединение для текущего потока."""
         if not hasattr(self._local, 'connection') or not self._local.connection:
             self._local.connection = self._create_connection()
         return self._local.connection
-    
+
     def _create_connection(self) -> sqlite3.Connection:
         """Создать новое соединение."""
         db_path = Path(self.db_path)
@@ -38,17 +38,17 @@ class Database:
             check_same_thread=False
         )
         conn.row_factory = sqlite3.Row
-        
+
         # Оптимизация для production
         conn.execute("PRAGMA journal_mode = WAL")
         conn.execute("PRAGMA synchronous = NORMAL")
         conn.execute("PRAGMA cache_size = -64000")
         conn.execute("PRAGMA busy_timeout = 30000")
         conn.execute("PRAGMA temp_store = MEMORY")
-        
+
         logger.debug(f"DB connection created for thread {threading.get_ident()}")
         return conn
-    
+
     @contextmanager
     def connection(self) -> Generator[sqlite3.Connection, None, None]:
         """Context manager для соединения."""
@@ -64,7 +64,7 @@ class Database:
             conn.rollback()
             logger.error(f"DB error: {e}")
             raise
-    
+
     @contextmanager
     def cursor(self):
         """Context manager для курсора."""
@@ -76,7 +76,7 @@ class Database:
             conn.rollback()
             logger.error(f"DB cursor error: {e}")
             raise
-    
+
     def close(self):
         """Закрыть соединение для текущего потока."""
         if hasattr(self._local, 'connection') and self._local.connection:

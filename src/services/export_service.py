@@ -3,24 +3,22 @@
 """
 import csv
 import io
-from typing import List, Dict
-from datetime import datetime
 
 from src.database.db import db
-from src.utils.helpers import format_price
+
 
 class ExportService:
     @staticmethod
     def export_orders(limit: int = 5000) -> bytes:
         output = io.StringIO()
         writer = csv.writer(output, delimiter=';')
-        
+
         writer.writerow([
             'ID заказа', 'ID пользователя', 'Имя', 'Username',
             'Сумма', 'Статус', 'Метод оплаты', 'Дата создания',
             'Промокод', 'Скидка', 'Бонусы', 'Кэшбэк'
         ])
-        
+
         with db.cursor() as c:
             c.execute("""
                 SELECT o.*, u.first_name, u.username
@@ -29,7 +27,7 @@ class ExportService:
                 ORDER BY o.created_at DESC
                 LIMIT ?
             """, (limit,))
-            
+
             for row in c.fetchall():
                 writer.writerow([
                     row['id'], row['user_id'], row['first_name'] or '', row['username'] or '',
@@ -38,6 +36,6 @@ class ExportService:
                     row['promo_code'] or '', row['discount_rub'] or 0,
                     row['bonus_used'] or 0, row['cashback_amount'] or 0
                 ])
-        
+
         output.seek(0)
         return output.getvalue().encode('utf-8-sig')

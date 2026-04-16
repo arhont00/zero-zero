@@ -11,7 +11,6 @@ from datetime import datetime
 
 from src.database.db import db
 from src.database.models import UserModel
-from src.services.broadcast_manager import BroadcastManager
 from src.utils.helpers import split_long_message
 
 logger = logging.getLogger(__name__)
@@ -33,25 +32,25 @@ async def admin_broadcast(callback: CallbackQuery):
     if not UserModel.is_admin(callback.from_user.id):
         await callback.answer("❌ Нет прав")
         return
-    
+
     # Получаем историю рассылок
     with db.cursor() as c:
         c.execute("SELECT COUNT(*) as cnt FROM broadcasts")
         total = c.fetchone()['cnt']
-    
+
     text = (
         f"📢 *УПРАВЛЕНИЕ РАССЫЛКАМИ*\n\n"
         f"📊 *Статистика:*\n"
         f"• Всего рассылок: {total}\n\n"
         f"Выберите действие:"
     )
-    
+
     buttons = [
         [InlineKeyboardButton(text="📝 СОЗДАТЬ РАССЫЛКУ", callback_data="broadcast_create")],
         [InlineKeyboardButton(text="📊 ИСТОРИЯ РАССЫЛОК", callback_data="broadcast_history")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_menu")]
     ]
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -62,7 +61,7 @@ async def broadcast_history(callback: CallbackQuery):
     with db.cursor() as c:
         c.execute("SELECT * FROM broadcasts ORDER BY created_at DESC LIMIT 10")
         history = [dict(row) for row in c.fetchall()]
-    
+
     if not history:
         await callback.message.edit_text(
             "📭 История рассылок пуста.",
@@ -72,13 +71,17 @@ async def broadcast_history(callback: CallbackQuery):
         )
         await callback.answer()
         return
-    
+
     text = "📊 *ИСТОРИЯ РАССЫЛОК*\n\n"
     for b in history:
         date = b['created_at'][:16] if b['created_at'] else ""
         preview = b['broadcast_text'][:50] + "..." if len(b['broadcast_text']) > 50 else b['broadcast_text']
-        text += f"• {date}\n  {preview}\n  ✅ {b['sent_count']} | ❌ {b['failed_count']} | 🚫 {b['blocked_count']} | Всего: {b['total_count']}\n\n"
-    
+        text += f"• {date}\n  {preview}\n  ✅ {
+            b['sent_count']} | ❌ {
+            b['failed_count']} | 🚫 {
+            b['blocked_count']} | Всего: {
+                b['total_count']}\n\n"
+
     if len(text) > 3500:
         parts = split_long_message(text)
         for part in parts:
@@ -124,7 +127,7 @@ async def broadcast_text_received(message: Message, state: FSMContext):
             ])
         )
         return
-    
+
     await state.update_data(broadcast_text=message.text, parse_mode="Markdown", reply_markup=None)
     await state.set_state(BroadcastStates.waiting_audience)
     await show_audience_selection(message, state)
@@ -142,16 +145,16 @@ async def broadcast_buttons(message: Message, state: FSMContext):
             ])
         )
         return
-    
+
     if message.text == "/skip":
         await state.update_data(reply_markup=None)
         await state.set_state(BroadcastStates.waiting_audience)
         await show_audience_selection(message, state)
         return
-    
+
     await state.update_data(button_text=message.text)
     await state.set_state(BroadcastStates.waiting_button_url)
-    
+
     await message.answer(
         "🔗 Введите URL для кнопки (или /skip, если не нужна ссылка):"
     )
@@ -162,7 +165,7 @@ async def broadcast_button_url(message: Message, state: FSMContext):
     """Получение URL для кнопки."""
     data = await state.get_data()
     button_text = data.get('button_text')
-    
+
     if message.text == "/skip":
         reply_markup = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text=button_text, callback_data="noop")]]
@@ -171,7 +174,7 @@ async def broadcast_button_url(message: Message, state: FSMContext):
         reply_markup = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text=button_text, url=message.text)]]
         )
-    
+
     await state.update_data(reply_markup=reply_markup)
     await state.set_state(BroadcastStates.waiting_audience)
     await show_audience_selection(message, state)
@@ -183,16 +186,16 @@ async def show_audience_selection(message: Message, state: FSMContext):
     with db.cursor() as c:
         c.execute("SELECT COUNT(*) as cnt FROM users")
         total_users = c.fetchone()['cnt']
-        
+
         c.execute("SELECT COUNT(DISTINCT user_id) as cnt FROM funnel_stats WHERE created_at > datetime('now', '-30 days')")
         active_users = c.fetchone()['cnt']
-        
+
         c.execute("SELECT COUNT(*) as cnt FROM new_item_subscribers")
         subscribers = c.fetchone()['cnt']
-        
+
         c.execute("SELECT COUNT(DISTINCT user_id) as cnt FROM orders WHERE status = 'paid'")
         buyers = c.fetchone()['cnt']
-    
+
     text = (
         f"👥 *ВЫБОР АУДИТОРИИ*\n\n"
         f"📊 *Доступные сегменты:*\n"
@@ -202,7 +205,7 @@ async def show_audience_selection(message: Message, state: FSMContext):
         f"• Купившие хотя бы раз: {buyers}\n\n"
         f"Выберите, кому отправить рассылку:"
     )
-    
+
     buttons = [
         [InlineKeyboardButton(text=f"👥 ВСЕ ({total_users})", callback_data="audience_all")],
         [InlineKeyboardButton(text=f"🔥 АКТИВНЫЕ ({active_users})", callback_data="audience_active")],
@@ -210,7 +213,7 @@ async def show_audience_selection(message: Message, state: FSMContext):
         [InlineKeyboardButton(text=f"💰 КУПИВШИЕ ({buyers})", callback_data="audience_buyers")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_broadcast")]
     ]
-    
+
     await message.answer(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 
@@ -218,7 +221,7 @@ async def show_audience_selection(message: Message, state: FSMContext):
 async def broadcast_audience(callback: CallbackQuery, state: FSMContext):
     """Выбор аудитории."""
     audience_type = callback.data.replace("audience_", "")
-    
+
     if audience_type == "all":
         with db.cursor() as c:
             c.execute("SELECT user_id FROM users")
@@ -238,7 +241,7 @@ async def broadcast_audience(callback: CallbackQuery, state: FSMContext):
     else:
         await callback.answer("❌ Неизвестный тип аудитории")
         return
-    
+
     if not user_ids:
         await callback.message.edit_text(
             "❌ В выбранной аудитории нет пользователей.",
@@ -249,15 +252,15 @@ async def broadcast_audience(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
         await state.clear()
         return
-    
+
     await state.update_data(audience=user_ids, audience_type=audience_type, total=len(user_ids))
     await state.set_state(BroadcastStates.waiting_confirm)
-    
+
     # Показываем предпросмотр
     data = await state.get_data()
     text = data['broadcast_text']
     preview = text[:200] + "..." if len(text) > 200 else text
-    
+
     await callback.message.edit_text(
         f"📨 *ПОДТВЕРЖДЕНИЕ РАССЫЛКИ*\n\n"
         f"👥 *Аудитория:* {audience_type}\n"
@@ -280,7 +283,7 @@ async def broadcast_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot
     text = data['broadcast_text']
     parse_mode = data.get('parse_mode', 'Markdown')
     reply_markup = data.get('reply_markup')
-    
+
     await callback.message.edit_text(
         f"📤 *РАССЫЛКА НАЧАТА*\n\n"
         f"Всего получателей: {len(user_ids)}\n"
@@ -288,22 +291,22 @@ async def broadcast_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot
         f"Я буду сообщать о прогрессе."
     )
     await callback.answer()
-    
+
     # Функция для обновления прогресса
     async def progress(current, total):
         if current % 50 == 0:
             await callback.message.edit_text(
                 f"📤 *РАССЫЛКА В ПРОЦЕССЕ*\n\n"
                 f"Отправлено: {current} из {total}\n"
-                f"Прогресс: {current/total*100:.1f}%"
+                f"Прогресс: {current / total * 100:.1f}%"
             )
-    
+
     # Запускаем отправку
     sent = 0
     failed = 0
     blocked = 0
     total = len(user_ids)
-    
+
     for i, user_id in enumerate(user_ids):
         try:
             await bot.send_message(user_id, text, parse_mode=parse_mode, reply_markup=reply_markup)
@@ -315,21 +318,21 @@ async def broadcast_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot
             else:
                 failed += 1
             logger.warning(f"Ошибка отправки пользователю {user_id}: {e}")
-        
+
         if (i + 1) % 10 == 0:
             await progress(i + 1, total)
-        
+
         await asyncio.sleep(0.04)  # задержка между сообщениями
-    
+
     # Сохраняем статистику
     with db.cursor() as c:
         c.execute("""
             INSERT INTO broadcasts (broadcast_text, sent_count, failed_count, blocked_count, total_count, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (text[:500], sent, failed, blocked, total, datetime.now()))
-    
+
     await state.clear()
-    
+
     await callback.message.edit_text(
         f"✅ *РАССЫЛКА ЗАВЕРШЕНА*\n\n"
         f"📊 *Статистика:*\n"

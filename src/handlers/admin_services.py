@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 from src.database.db import db
 from src.database.models import UserModel, ServiceModel, ScheduleModel, ConsultationModel
-from src.utils.helpers import format_price, format_datetime
+from src.utils.helpers import format_price
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -24,7 +24,7 @@ class AdminServiceStates(StatesGroup):
     service_create_duration = State()
     service_edit = State()
     service_edit_field = State()
-    
+
     # Расписание
     schedule_add_date = State()
     schedule_add_time = State()
@@ -37,17 +37,17 @@ async def admin_services(callback: CallbackQuery):
     if not UserModel.is_admin(callback.from_user.id):
         await callback.answer("❌ Нет прав")
         return
-    
+
     services = ServiceModel.get_all(active_only=False)
     pending = ConsultationModel.get_pending()  # нужно добавить этот метод
-    
+
     text = (
         f"✨ *УПРАВЛЕНИЕ УСЛУГАМИ*\n\n"
         f"📋 *Услуг:* {len(services)}\n"
         f"📅 *Ожидают подтверждения:* {len(pending)}\n\n"
         f"Выберите действие:"
     )
-    
+
     buttons = [
         [InlineKeyboardButton(text="📋 СПИСОК УСЛУГ", callback_data="admin_services_list")],
         [InlineKeyboardButton(text="➕ СОЗДАТЬ УСЛУГУ", callback_data="admin_service_create")],
@@ -55,7 +55,7 @@ async def admin_services(callback: CallbackQuery):
         [InlineKeyboardButton(text="📋 ЗАПИСИ КЛИЕНТОВ", callback_data="admin_consultations")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_menu")]
     ]
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -68,7 +68,7 @@ async def admin_services(callback: CallbackQuery):
 async def admin_services_list(callback: CallbackQuery):
     """Список услуг."""
     services = ServiceModel.get_all(active_only=False)
-    
+
     if not services:
         await callback.message.edit_text(
             "📭 Услуг пока нет.",
@@ -79,10 +79,10 @@ async def admin_services_list(callback: CallbackQuery):
         )
         await callback.answer()
         return
-    
+
     text = "✨ *СПИСОК УСЛУГ*\n\n"
     buttons = []
-    
+
     for s in services:
         status = "✅" if s['active'] else "❌"
         text += f"{status} *{s['name']}* — {format_price(s['price'])} ({s['duration']} мин)\n"
@@ -90,9 +90,9 @@ async def admin_services_list(callback: CallbackQuery):
             text=f"✏️ {s['name'][:20]}",
             callback_data=f"admin_service_view_{s['id']}"
         )])
-    
+
     buttons.append([InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_services")])
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -102,13 +102,13 @@ async def admin_service_view(callback: CallbackQuery):
     """Просмотр деталей услуги."""
     service_id = int(callback.data.replace("admin_service_view_", ""))
     service = ServiceModel.get_by_id(service_id)
-    
+
     if not service:
         await callback.answer("❌ Услуга не найдена")
         return
-    
+
     status = "✅ Активна" if service['active'] else "❌ Неактивна"
-    
+
     text = (
         f"✨ *{service['name']}*\n\n"
         f"📊 *Статус:* {status}\n"
@@ -116,14 +116,14 @@ async def admin_service_view(callback: CallbackQuery):
         f"⏱️ *Длительность:* {service['duration']} мин\n"
         f"📝 *Описание:*\n{service['description']}\n"
     )
-    
+
     buttons = [
         [InlineKeyboardButton(text="✏️ РЕДАКТИРОВАТЬ", callback_data=f"admin_service_edit_{service_id}")],
         [InlineKeyboardButton(text="🔄 АКТИВИРОВАТЬ/ДЕАКТИВИРОВАТЬ", callback_data=f"admin_service_toggle_{service_id}")],
         [InlineKeyboardButton(text="❌ УДАЛИТЬ", callback_data=f"admin_service_delete_{service_id}")],
         [InlineKeyboardButton(text="🔙 К СПИСКУ", callback_data="admin_services_list")]
     ]
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -160,7 +160,7 @@ async def admin_service_create_price(message: Message, state: FSMContext):
     except (TypeError, ValueError):
         await message.answer("❌ Введите число")
         return
-    
+
     await state.set_state(AdminServiceStates.service_create_duration)
     await message.answer("⏱️ Введите длительность услуги в минутах:")
 
@@ -172,16 +172,16 @@ async def admin_service_create_duration(message: Message, state: FSMContext):
     except (TypeError, ValueError):
         await message.answer("❌ Введите число")
         return
-    
+
     data = await state.get_data()
-    
+
     with db.cursor() as c:
         c.execute("""
             INSERT INTO services (name, description, price, duration, active, created_at)
             VALUES (?, ?, ?, ?, 1, ?)
         """, (data['name'], data['description'], data['price'], duration, datetime.now()))
         service_id = c.lastrowid
-    
+
     await state.clear()
     await message.answer(
         f"✅ *УСЛУГА СОЗДАНА!*\n\nID: {service_id}",
@@ -196,16 +196,16 @@ async def admin_service_toggle(callback: CallbackQuery):
     """Активация/деактивация услуги."""
     service_id = int(callback.data.replace("admin_service_toggle_", ""))
     service = ServiceModel.get_by_id(service_id)
-    
+
     if not service:
         await callback.answer("❌ Услуга не найдена")
         return
-    
+
     new_status = 0 if service['active'] else 1
-    
+
     with db.cursor() as c:
         c.execute("UPDATE services SET active = ? WHERE id = ?", (new_status, service_id))
-    
+
     status_text = "активирована" if new_status else "деактивирована"
     await callback.message.edit_text(
         f"✅ Услуга {status_text}",
@@ -307,10 +307,10 @@ async def admin_service_edit_field_save(message: Message, state: FSMContext):
 async def admin_service_delete(callback: CallbackQuery):
     """Удаление услуги."""
     service_id = int(callback.data.replace("admin_service_delete_", ""))
-    
+
     await callback.message.edit_text(
-        f"⚠️ *ПОДТВЕРДИТЕ УДАЛЕНИЕ*\n\n"
-        f"Удалить услугу?",
+        "⚠️ *ПОДТВЕРДИТЕ УДАЛЕНИЕ*\n\n"
+        "Удалить услугу?",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(text="✅ Да", callback_data=f"admin_service_confirm_delete_{service_id}"),
@@ -324,10 +324,10 @@ async def admin_service_delete(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("admin_service_confirm_delete_"))
 async def admin_service_confirm_delete(callback: CallbackQuery):
     service_id = int(callback.data.replace("admin_service_confirm_delete_", ""))
-    
+
     with db.cursor() as c:
         c.execute("DELETE FROM services WHERE id = ?", (service_id,))
-    
+
     await callback.message.edit_text(
         "✅ Услуга удалена",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -345,20 +345,20 @@ async def admin_service_confirm_delete(callback: CallbackQuery):
 async def admin_schedule(callback: CallbackQuery):
     """Управление расписанием."""
     slots = ScheduleModel.get_available(days_ahead=7)
-    
+
     text = (
         f"📅 *УПРАВЛЕНИЕ РАСПИСАНИЕМ*\n\n"
         f"Свободных слотов на 7 дней: {len(slots)}\n\n"
         f"Выберите действие:"
     )
-    
+
     buttons = [
         [InlineKeyboardButton(text="📋 ПОСМОТРЕТЬ СЛОТЫ", callback_data="admin_slots_view")],
         [InlineKeyboardButton(text="➕ ДОБАВИТЬ СЛОТЫ", callback_data="admin_slots_add")],
         [InlineKeyboardButton(text="➕ ДОБАВИТЬ НА НЕДЕЛЮ", callback_data="admin_slots_add_week")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_services")]
     ]
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -367,7 +367,7 @@ async def admin_schedule(callback: CallbackQuery):
 async def admin_slots_view(callback: CallbackQuery):
     """Просмотр слотов."""
     slots = ScheduleModel.get_available(days_ahead=14)
-    
+
     if not slots:
         await callback.message.edit_text(
             "📭 Нет свободных слотов.",
@@ -377,7 +377,7 @@ async def admin_slots_view(callback: CallbackQuery):
         )
         await callback.answer()
         return
-    
+
     # Группируем по датам
     by_date = {}
     for s in slots:
@@ -385,14 +385,14 @@ async def admin_slots_view(callback: CallbackQuery):
         if date not in by_date:
             by_date[date] = []
         by_date[date].append(s['time_slot'])
-    
+
     text = "📅 *СВОБОДНЫЕ СЛОТЫ*\n\n"
     for date, times in sorted(by_date.items()):
         text += f"*{date}:* {', '.join(times[:5])}"
         if len(times) > 5:
-            text += f" и ещё {len(times)-5}"
+            text += f" и ещё {len(times) - 5}"
         text += "\n"
-    
+
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -421,7 +421,7 @@ async def admin_slots_add_date(message: Message, state: FSMContext):
     except ValueError:
         await message.answer("❌ Неверный формат даты")
         return
-    
+
     await state.update_data(slot_date=date)
     await state.set_state(AdminServiceStates.schedule_add_time)
     await message.answer("⏰ Введите время в формате ЧЧ:ММ (например, 14:00):")
@@ -432,19 +432,19 @@ async def admin_slots_add_time(message: Message, state: FSMContext):
     data = await state.get_data()
     date = data['slot_date']
     time = message.text.strip()
-    
+
     try:
         datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M')
     except ValueError:
         await message.answer("❌ Неверный формат времени")
         return
-    
+
     with db.cursor() as c:
         c.execute("""
             INSERT OR IGNORE INTO schedule_slots (slot_date, time_slot, available)
             VALUES (?, ?, 1)
         """, (date, time))
-    
+
     await state.clear()
     await message.answer(
         "✅ Слот добавлен!",
@@ -460,17 +460,17 @@ async def admin_slots_add_week(callback: CallbackQuery):
     """Автоматическое добавление слотов на неделю."""
     start_date = datetime.now().date()
     added = 0
-    
+
     for day_offset in range(1, 8):
         day = start_date + timedelta(days=day_offset)
         date_str = day.strftime('%Y-%m-%d')
-        
+
         # Выходные - меньше слотов
         if day.weekday() >= 5:  # суббота, воскресенье
             times = ['10:00', '12:00', '14:00', '16:00']
         else:
             times = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']
-        
+
         with db.cursor() as c:
             for t in times:
                 c.execute("""
@@ -478,7 +478,7 @@ async def admin_slots_add_week(callback: CallbackQuery):
                     VALUES (?, ?, 1)
                 """, (date_str, t))
                 added += 1
-    
+
     await callback.message.edit_text(
         f"✅ Добавлено {added} слотов на следующую неделю!",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -506,7 +506,7 @@ async def admin_consultations(callback: CallbackQuery):
             LIMIT 20
         """)
         consultations = [dict(row) for row in c.fetchall()]
-    
+
     if not consultations:
         await callback.message.edit_text(
             "📭 Нет записей.",
@@ -516,10 +516,10 @@ async def admin_consultations(callback: CallbackQuery):
         )
         await callback.answer()
         return
-    
+
     text = "📋 *ЗАПИСИ КЛИЕНТОВ*\n\n"
     buttons = []
-    
+
     for c in consultations:
         status_emoji = {
             'pending': '⏳',
@@ -527,15 +527,15 @@ async def admin_consultations(callback: CallbackQuery):
             'completed': '✔️',
             'cancelled': '❌'
         }.get(c['status'], '❓')
-        
+
         text += f"{status_emoji} #{c['id']} | {c['first_name']} | {c['service_name']} | {c['slot_date']}\n"
         buttons.append([InlineKeyboardButton(
             text=f"📋 Запись #{c['id']}",
             callback_data=f"admin_consult_view_{c['id']}"
         )])
-    
+
     buttons.append([InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_services")])
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -544,7 +544,7 @@ async def admin_consultations(callback: CallbackQuery):
 async def admin_consult_view(callback: CallbackQuery, bot: Bot):
     """Просмотр деталей записи."""
     consult_id = int(callback.data.replace("admin_consult_view_", ""))
-    
+
     with db.cursor() as c:
         c.execute("""
             SELECT c.*, u.first_name, u.username, u.user_id, s.name as service_name, s.price, sl.slot_date, sl.time_slot
@@ -555,18 +555,18 @@ async def admin_consult_view(callback: CallbackQuery, bot: Bot):
             WHERE c.id = ?
         """, (consult_id,))
         consult = c.fetchone()
-    
+
     if not consult:
         await callback.answer("❌ Запись не найдена")
         return
-    
+
     status_emoji = {
         'pending': '⏳ Ожидает',
         'confirmed': '✅ Подтверждена',
         'completed': '✔️ Выполнена',
         'cancelled': '❌ Отменена'
     }.get(consult['status'], consult['status'])
-    
+
     text = (
         f"📋 *ЗАПИСЬ #{consult_id}*\n\n"
         f"👤 *Клиент:* {consult['first_name']} (@{consult['username']})\n"
@@ -576,10 +576,10 @@ async def admin_consult_view(callback: CallbackQuery, bot: Bot):
         f"⏰ *Время:* {consult['time_slot']}\n"
         f"📊 *Статус:* {status_emoji}\n"
     )
-    
+
     if consult['comment']:
         text += f"📝 *Комментарий:* {consult['comment']}\n"
-    
+
     buttons = [
         [InlineKeyboardButton(text="✅ ПОДТВЕРДИТЬ", callback_data=f"admin_consult_status_{consult_id}_confirmed")],
         [InlineKeyboardButton(text="✔️ ЗАВЕРШИТЬ", callback_data=f"admin_consult_status_{consult_id}_completed")],
@@ -587,7 +587,7 @@ async def admin_consult_view(callback: CallbackQuery, bot: Bot):
         [InlineKeyboardButton(text="✍️ НАПИСАТЬ КЛИЕНТУ", url=f"tg://user?id={consult['user_id']}")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="admin_consultations")]
     ]
-    
+
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
@@ -598,25 +598,25 @@ async def admin_consult_status(callback: CallbackQuery, bot: Bot):
     parts = callback.data.split("_")
     consult_id = int(parts[3])
     new_status = parts[4]
-    
+
     with db.cursor() as c:
         c.execute("UPDATE consultations SET status = ? WHERE id = ?", (new_status, consult_id))
         c.execute("SELECT user_id FROM consultations WHERE id = ?", (consult_id,))
         user_id = c.fetchone()['user_id']
-    
+
     status_text = {
         'confirmed': 'подтверждена',
         'completed': 'завершена',
         'cancelled': 'отменена'
     }.get(new_status, new_status)
-    
+
     # Уведомление клиенту
     await bot.send_message(
         user_id,
         f"📅 *СТАТУС ВАШЕЙ ЗАПИСИ ИЗМЕНЁН*\n\n"
         f"Новый статус: {status_text}"
     )
-    
+
     await callback.message.edit_text(
         f"✅ Статус изменён на {new_status}",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[

@@ -4,6 +4,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import List
 
+
 def get_scheduler_main_keyboard() -> InlineKeyboardMarkup:
     """Главное меню планировщика."""
     buttons = [
