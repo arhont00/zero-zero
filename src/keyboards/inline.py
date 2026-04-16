@@ -14,9 +14,7 @@ def get_main_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="💎 ВИТРИНА", callback_data="showcase"),
          InlineKeyboardButton(text="🛒 КОРЗИНА", callback_data="cart")],
         # --- Подбор ---
-        [InlineKeyboardButton(text="🦊 ТОТЕМНЫЙ КАМЕНЬ", callback_data="totem")],
-        [InlineKeyboardButton(text="🔮 СОВМЕСТИМОСТЬ КАМНЕЙ", callback_data="compatibility"),
-         InlineKeyboardButton(text="🔍 ПОИСК КАМНЯ", callback_data="search_stones")],
+        [InlineKeyboardButton(text="🔍 ПОИСК КАМНЯ", callback_data="search_stones")],
         # --- Знания ---
         [InlineKeyboardButton(text="📚 БАЗА ЗНАНИЙ", callback_data="knowledge"),
          InlineKeyboardButton(text="🌅 КАМЕНЬ ДНЯ", callback_data="daily_stone")],
@@ -27,8 +25,6 @@ def get_main_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="👤 МОЙ ПРОФИЛЬ", callback_data="profile"),
          InlineKeyboardButton(text="🤝 РЕФЕРАЛЫ", callback_data="referral")],
         # --- Прочее ---
-        [InlineKeyboardButton(text="🎁 СЕРТИФИКАТЫ", callback_data="gifts")],
-        [InlineKeyboardButton(text="🧘 ПРАКТИКИ", callback_data="workouts")],
         [InlineKeyboardButton(text="❓ FAQ", callback_data="faq"),
          InlineKeyboardButton(text="📞 СВЯЗЬ С МАСТЕРОМ", callback_data="contact_master")],
     ]
